@@ -1,0 +1,17 @@
+[project]
+name = "tla-advisor"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "genericmaster", email = "rakhivhanithendo@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = []
+
+[project.scripts]
+technical-lab-assistant-rag-system = "technical_lab_assistant_rag_system:main"
+
+[build-system]
+requires = ["uv_build>=0.10.7,<0.11.0"]
+build-backend = "uv_build"
