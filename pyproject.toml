@@ -7,10 +7,13 @@ authors = [
     { name = "genericmaster", email = "rakhivhanithendo@gmail.com" }
 ]
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "chromadb>=1.5.9",
+    "ollama>=0.6.2",
+]
 
 [project.scripts]
-technical-lab-assistant-rag-system = "technical_lab_assistant_rag_system:main"
+tla-advisor= "tla_advisor:main"
 
 [build-system]
 requires = ["uv_build>=0.10.7,<0.11.0"]
