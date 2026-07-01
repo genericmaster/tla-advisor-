@@ -1624,12 +1624,14 @@ source = { editable = "." }
 dependencies = [
     { name = "chromadb" },
     { name = "ollama" },
+    { name = "python-dotenv" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "chromadb", specifier = ">=1.5.9" },
     { name = "ollama", specifier = ">=0.6.2" },
+    { name = "python-dotenv", specifier = ">=1.2.2" },
 ]
 
 [[package]]
