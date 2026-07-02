@@ -23,7 +23,7 @@ different Wi-Fi network (e.g., a mobile hotspot), since it won’t work if
 you’re already on Wits Wi-Fi. """
 
 concatinate = query+context
-message = f'give detailed steps for each scenario  ,user has no acccess to documents{concatinate}'
+message = f'give detailed steps for each scenario ,user has no acccess to documents{concatinate}'
 #testing the request and response 
 
 response = ollama.chat(
@@ -37,5 +37,5 @@ response = ollama.chat(
 for chunk in response:
     print(chunk['message']['content'],end ='',flush=True)
 
-# if strteaming is false
+# if streaming is false
 print(response.message.content)
