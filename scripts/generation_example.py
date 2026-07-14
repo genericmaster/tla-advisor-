@@ -1,5 +1,6 @@
 import ollama
 import json
+import time
 query = "the vpn is not working "
 context = """1. Trouble connecting to the VPN. 
 As we know Wits uses the Cisco AnyConnect VPN, and staff members rely on it 
@@ -23,19 +24,23 @@ different Wi-Fi network (e.g., a mobile hotspot), since it won’t work if
 you’re already on Wits Wi-Fi. """
 
 concatinate = query+context
-message = f'give detailed steps for each scenario ,user has no acccess to documents{concatinate}'
+message = f'give detailed steps for each scenario {concatinate}'
 #testing the request and response 
 
 response = ollama.chat(
-    model='qwen2.5:3b',
+    model='qwen3.5:9b',
     format= '',
-    messages= [{'role':'assistant','content': message}],
-   stream=True
+    messages= [ {'role': 'system', 'content': 'Be concise.'},
+        {'role':'user','content': message}],
+   stream=True,
+   think=False
+   
 )
 
 #streaming
 for chunk in response:
-    print(chunk['message']['content'],end ='',flush=True)
+  
+    print(chunk.message.content,end ='',flush=True)
+    time.sleep(0.5)
 
 # if streaming is false
-print(response.message.content)

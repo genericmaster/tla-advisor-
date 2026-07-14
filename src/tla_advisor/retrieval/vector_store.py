@@ -1,5 +1,8 @@
+import logging
 from chromadb import PersistentClient
 from abc import ABC,abstractmethod
+
+logger = logging.getLogger(__name__)
 
 #abstract method that defines how  any other vector database class must be handles
 class VectorStore(ABC):
@@ -20,19 +23,30 @@ class ChromaVectorStore(VectorStore):
         if  not documents:
             raise ValueError("Cannot add collection with empty or missing document content") 
             
-       
-        self.collection.add(ids = ids,
-                            embeddings=embeddings,
-                            documents = documents   
+        try:
+            self.collection.add(ids = ids,
+                                embeddings=embeddings,
+                                documents = documents   
                 )
+            logger.info("document added to database successfully")
+        except Exception as e :
+            logger.error(f"document database addition could not be perfomed: {e}")
+            raise
+            
     def query(self, query_embedding:list[list[float]], n_results=5)->dict:
         if self.collection.count()==0:
+            logger.warning("query attempted on empty collection")
             raise RuntimeError("Cannot perform search on an empty collection.") 
+        try:
+            vector_query =self.collection.query(query_embeddings = query_embedding,
+                                    n_results = n_results   
+                )
+            logger.info("query and retrieval done successfully")
+            return vector_query
         
-        vector_query =self.collection.query(query_embeddings = query_embedding,
-                                 n_results = n_results   
-            )
-        return vector_query
+        except Exception as e:
+           logger.error(f"query could not be perfomed : {e}")
+           raise
     
        
         

@@ -26,4 +26,4 @@ results=collection.query(query_embeddings=query_embed,
                  n_results=2 
                 
 )
-
+print(results)

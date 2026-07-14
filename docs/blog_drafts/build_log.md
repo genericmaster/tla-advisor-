@@ -57,3 +57,26 @@ key decisions
   -that meant i had to expose what query returned 
   - deciding not to prune return from query until i know what will be useful when testing the system out
   
+## 2026-07-03 -generator component 
+
+what i did
+- created a generator class that has the responsibilty of taking a 2 types of prompts and giving back a response a user can use
+
+- it mainly needs a system prompt and a user prompt
+- user prompt must include both query and context
+- both prompts are constructed outsidet the component
+
+key decisions
+ - deciding that query and context formatting and concatination happen outside the component
+
+ - using the same  client as embedder for model responses reason was mainly to reduce amount of api calls
+ - kepping the same  base class concrete class implementation as the other components for consistency
+
+ ## small writeup on build prompt
+
+ - build prompt is a function that i made so that query context processing  is decoupled from the generator class it takes in the response from chroma vectore store query abd extracts the chunks needed a bit of preprocessing is done then it is concatinated with query  before being fed to the ollamgenrator class
+ 
+
+## 2026-07-04  DOCUMENT LOADER AND CHUNKING COMPONENT
+
+## ISSUES WITH CHUNKING STRATEGY 

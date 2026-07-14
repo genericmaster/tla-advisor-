@@ -4,7 +4,9 @@ this is a early development iteration of my feedback based rag system that uses 
 
 ## Basic setup
 
+
 ## Design decisions
+
 
 ## Components built so far
 
@@ -18,5 +20,14 @@ this is a early development iteration of my feedback based rag system that uses 
  - abstract `VectorStore` base class
  - `ChromaVectorStore` concrete class using  a persistent client instance from chromadb
  - handles adding chunks/documents to vector database and handles routing embedded query and retireval  
+- abstract `GENERATOR` base class 
+- '`OLLAMAGENERATOR` is the concrete implementation  that uses same ollama client as
+
+`OLLAMAEMBedder` 
+- it handles the response generation using local models which are easily interchangeable future implemetation maybe to let the user choose which model   they want a response from
+
+- `ollama_build_prompt` is  a standalone  function  that deals with the formatting of the query and context then concatinating them 
+- assists in maintaining single responsibility for generator classes
+
 
 ## Usage

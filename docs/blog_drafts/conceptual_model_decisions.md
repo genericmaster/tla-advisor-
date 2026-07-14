@@ -11,3 +11,6 @@ Notes for future writeup:
   and "i really like strings more than files". Query was "find a question on whether the collection takes 
   in a document or text" — different wording, different keywords, but it still returned the right document 
   as the top match. Semantic search working as intended.
+
+  -generator classes must stay decoupled
+  - using the same client decison
