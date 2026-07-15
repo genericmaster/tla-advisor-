@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TLA Advisor</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <!-- Sidebar overlay (mobile: covers screen, desktop: pushes content) -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Slide-in sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <span>TLA ADVISOR</span>
+            <button class="sidebar-close" id="sidebarClose" aria-label="Close menu">✕</button>
+        </div>
+        <nav class="sidebar-nav">
+            <p class="sidebar-section-label">History</p>
+            <ul class="history-list">
+                <li>Printer not connecting</li>
+                <li>VPN setup issue</li>
+                <li>No sound after update</li>
+            </ul>
+            <p class="sidebar-section-label">Settings</p>
+            <ul class="settings-list">
+                <li>About</li>
+            </ul>
+        </nav>
+    </aside>
+
+    <!-- Main chat panel -->
+    <div class="chat-panel">
+
+        <!-- Fixed header -->
+        <header class="chat-header">
+            <button class="menu-btn" id="menuBtn" aria-label="Open menu">☰</button>
+            <h1 class="chat-title">Current Chat</h1>
+            <button class="clear-btn" id="clearBtn">Clear</button>
+        </header>
+
+        <!-- Scrollable message area -->
+        <main class="messages" id="messages">
+
+            <!-- Empty state -->
+            <div class="empty-state" id="emptyState">
+                <p>Ask about a support issue to get started.</p>
+                <p class="empty-hint">e.g. <em>the printer won't connect</em></p>
+            </div>
+
+            <!-- Example user message -->
+            <div class="message message--user">
+                <div class="bubble">How do I fix the printer?</div>
+            </div>
+
+            <!-- Example assistant message -->
+            <div class="message message--assistant">
+                <div class="bubble">
+                    To fix the printer, follow these steps...
+                </div>
+                <!-- Inline feedback section -->
+                <div class="feedback" id="feedback-1">
+                    <button class="feedback-btn feedback-btn--up" aria-label="Helpful">👍</button>
+                    <button class="feedback-btn feedback-btn--down" aria-label="Not helpful">👎</button>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- Fixed input area -->
+        <footer class="input-area">
+            <input
+                class="message-input"
+                type="text"
+                placeholder="Describe the issue..."
+                aria-label="Message input"
+            >
+            <button class="send-btn" aria-label="Send">Send</button>
+        </footer>
+
+    </div>
+
+    <!-- Bottom sheet overlay -->
+    <div class="sheet-overlay" id="sheetOverlay"></div>
+
+    <!-- Correction bottom sheet -->
+    <div class="bottom-sheet" id="bottomSheet">
+        <div class="sheet-header">
+            <span class="sheet-title">What actually solved this?</span>
+            <button class="sheet-close" id="sheetClose" aria-label="Close">✕</button>
+        </div>
+        <div class="sheet-body">
+            <textarea
+                class="sheet-input"
+                id="sheetInput"
+                placeholder="Describe what fixed the problem..."
+                rows="4"
+            ></textarea>
+            <button class="sheet-submit" id="sheetSubmit">Submit</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
