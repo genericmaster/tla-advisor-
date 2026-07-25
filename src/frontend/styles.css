@@ -116,8 +116,6 @@ html, body {
     display: flex;
     flex-direction: column;
     height: 100vh;
-  
-    margin: 0 auto;
     background: #f0f4f9;
 }
 
@@ -346,6 +344,13 @@ html, body {
     white-space: nowrap;
     flex-shrink: 0;
 }
+.send-btn.sending{
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+    transition: opacity 0.2s;
+}
+
 
 .send-btn:hover {
     background: #2560d4;
@@ -480,4 +485,161 @@ html, body {
 
 .sheet-submit:hover {
     background: #2560d4;
+}
+
+/* ─── New Chat button ────────────────────────────────────────────────────── */
+.new-chat-btn {
+    display: block;
+    width: calc(100% - 16px);
+    margin: 12px 8px;
+    padding: 10px 16px;
+    background: #2f6fed;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+    min-height: 44px;
+}
+
+.new-chat-btn:hover {
+    background: #2560d4;
+}
+
+/* ─── Settings row (label + toggle side by side) ─────────────────────────── */
+.settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
+    font-size: 0.9rem;
+    color: #c4cdd9;
+}
+
+/* ─── Toggle switch ──────────────────────────────────────────────────────── */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+    flex-shrink: 0;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: #2d3a4a;
+    border-radius: 24px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    left: 3px;
+    top: 3px;
+    background: #ffffff;
+    border-radius: 50%;
+    transition: transform 0.2s;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+    background: #2f6fed;
+}
+
+.toggle-switch input:checked + .toggle-slider::before {
+    transform: translateX(20px);
+}
+
+/* ─── Dark mode ──────────────────────────────────────────────────────────── */
+body.dark {
+    background: #0e1117;
+    color: #e6ebf2;
+}
+
+body.dark .chat-panel {
+    background: #0e1117;
+}
+
+body.dark .chat-header {
+    background: #161b26;
+    border-bottom-color: #232a38;
+}
+
+body.dark .chat-title {
+    color: #e6ebf2;
+}
+
+body.dark .menu-btn,
+body.dark .clear-btn {
+    color: #8a94a6;
+}
+
+body.dark .menu-btn:hover,
+body.dark .clear-btn:hover {
+    background: #232a38;
+    color: #e6ebf2;
+}
+
+body.dark .message--assistant .bubble {
+    background: #161b26;
+    border-color: #232a38;
+    color: #e6ebf2;
+}
+
+body.dark .feedback-btn {
+    border-color: #232a38;
+    color: #8a94a6;
+}
+
+body.dark .feedback-btn:hover {
+    background: #232a38;
+}
+
+body.dark .input-area {
+    background: #161b26;
+    border-top-color: #232a38;
+}
+
+body.dark .message-input {
+    background: #232a38;
+    border-color: #2d3a4a;
+    color: #e6ebf2;
+}
+
+body.dark .message-input:focus {
+    border-color: #2f6fed;
+}
+
+body.dark .empty-state {
+    color: #5c6b80;
+}
+
+body.dark .bottom-sheet {
+    background: #161b26;
+}
+
+body.dark .sheet-header {
+    border-bottom-color: #232a38;
+}
+
+body.dark .sheet-title {
+    color: #e6ebf2;
+}
+
+body.dark .sheet-input {
+    background: #232a38;
+    border-color: #2d3a4a;
+    color: #e6ebf2;
 }

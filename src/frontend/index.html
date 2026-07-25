@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TLA Advisor</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
 
-    <!-- Sidebar overlay (mobile: covers screen, desktop: pushes content) -->
+    <!-- Sidebar overlay -->
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
     <!-- Slide-in sidebar -->
@@ -18,14 +18,18 @@
             <button class="sidebar-close" id="sidebarClose" aria-label="Close menu">✕</button>
         </div>
         <nav class="sidebar-nav">
+            <button class="new-chat-btn" id="newChatBtn">+ New Chat</button>
             <p class="sidebar-section-label">History</p>
-            <ul class="history-list">
-                <li>Printer not connecting</li>
-                <li>VPN setup issue</li>
-                <li>No sound after update</li>
-            </ul>
+            <ul class="history-list" id="historyList"></ul>
             <p class="sidebar-section-label">Settings</p>
             <ul class="settings-list">
+                <li class="settings-row">
+                    <span>Dark Mode</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="darkModeToggle">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </li>
                 <li>About</li>
             </ul>
         </nav>
@@ -38,35 +42,14 @@
         <header class="chat-header">
             <button class="menu-btn" id="menuBtn" aria-label="Open menu">☰</button>
             <h1 class="chat-title">Current Chat</h1>
-            <button class="clear-btn" id="clearBtn">Clear</button>
         </header>
 
         <!-- Scrollable message area -->
         <main class="messages" id="messages">
-
-            <!-- Empty state -->
             <div class="empty-state" id="emptyState">
                 <p>Ask about a support issue to get started.</p>
                 <p class="empty-hint">e.g. <em>the printer won't connect</em></p>
             </div>
-
-            <!-- Example user message -->
-            <div class="message message--user">
-                <div class="bubble">How do I fix the printer?</div>
-            </div>
-
-            <!-- Example assistant message -->
-            <div class="message message--assistant">
-                <div class="bubble">
-                    To fix the printer, follow these steps...
-                </div>
-                <!-- Inline feedback section -->
-                <div class="feedback" id="feedback-1">
-                    <button class="feedback-btn feedback-btn--up" aria-label="Helpful">👍</button>
-                    <button class="feedback-btn feedback-btn--down" aria-label="Not helpful">👎</button>
-                </div>
-            </div>
-
         </main>
 
         <!-- Fixed input area -->
@@ -102,6 +85,6 @@
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <script src="/app.js"></script>
 </body>
 </html>
