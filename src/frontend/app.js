@@ -17,6 +17,7 @@ function createMessage(role, content, error = false) {
     return {
         id: crypto.randomUUID(),
         role,
+        rating: null,
         content,
         createdAt: Date.now(),
         error,
@@ -161,28 +162,142 @@ function appendAssistantBubble(message) {
     bubble.className = 'bubble';
     bubble.textContent = message.content;
 
-    const feedback = buildFeedbackControls(message.id);
+    const feedback = buildFeedbackControls(message);
 
     wrapper.appendChild(bubble);
     wrapper.appendChild(feedback);
     messagesEl.appendChild(wrapper);
+    
 }
 
-function buildFeedbackControls(messageId) {
+function getSelectedFeedbackClass(rating, buttonType) {
+    if (rating === 'positive' && buttonType === 'up') return true;
+    if (rating === 'negative' && buttonType === 'down') return true;
+    return false;
+}
+
+function applyFeedbackSelection(feedbackEl, rating) {
+    const upBtn = feedbackEl.querySelector('.feedback-btn--up');
+    const downBtn = feedbackEl.querySelector('.feedback-btn--down');
+    upBtn.classList.toggle('feedback-btn--selected', getSelectedFeedbackClass(rating, 'up'));
+    downBtn.classList.toggle('feedback-btn--selected', getSelectedFeedbackClass(rating, 'down'));
+}
+
+function buildFeedbackControls(message) {
     const feedback = document.createElement('div');
     feedback.className = 'feedback';
-    feedback.dataset.messageId = messageId;
+    feedback.dataset.messageId = message.id;
     feedback.innerHTML = `
         <button class="feedback-btn feedback-btn--up" aria-label="Helpful">👍</button>
         <button class="feedback-btn feedback-btn--down" aria-label="Not helpful">👎</button>
     `;
+    applyFeedbackSelection(feedback, message.rating);
     return feedback;
 }
+
+
+function getMessageById(messageId) {
+    for (const conversation of conversations.values()) {
+        const found = conversation.messages.find(function (message) {
+            return message.id === messageId;
+        });
+        if (found !== undefined) return found;
+    }
+    return null;
+}
+
+function toggleMessageRating(message, clickedRating) {
+    message.rating = message.rating === clickedRating ? null : clickedRating;
+}
+
+function handleFeedbackClick(event) {
+    const button = event.target.closest('.feedback-btn');
+    if (button === null) return;
+
+    const feedbackEl = button.closest('.feedback');
+    const messageId = feedbackEl.dataset.messageId;
+    const message = getMessageById(messageId);
+    if (message === null) return;
+
+    const clickedRating = button.classList.contains('feedback-btn--up') ? 'positive' : 'negative';
+    toggleMessageRating(message, clickedRating);
+    applyFeedbackSelection(feedbackEl, message.rating);
+    saveState();
+}
+
+messagesEl.addEventListener('click', handleFeedbackClick);
 
 function scrollToBottom() {
     messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
+let activeFeedbackMessageId = null;
+function sendRatingFeedback(message, conversationId, query) {
+    fetch('/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            message_id: message.id,
+            conversation_id: conversationId,
+            query,
+            answer: message.content,
+            rating: message.rating,
+        }),
+    }).catch(function (err) {
+        console.warn('Failed to send rating feedback:', err);
+    });
+}
+
+function handleFeedbackClick(event) {
+    const button = event.target.closest('.feedback-btn');
+    if (button === null) return;
+
+    const feedbackEl = button.closest('.feedback');
+    const messageId = feedbackEl.dataset.messageId;
+    const message = getMessageById(messageId);
+    if (message === null) return;
+
+    const clickedRating = button.classList.contains('feedback-btn--up') ? 'positive' : 'negative';
+    toggleMessageRating(message, clickedRating);
+    applyFeedbackSelection(feedbackEl, message.rating);
+    saveState();
+
+    const conversation = findConversationByMessageId(messageId);
+    const query = getQueryForMessage(conversation, messageId);
+    sendRatingFeedback(message, conversation.id, query);
+
+    if (message.rating === 'negative') {
+        activeFeedbackMessageId = messageId;
+        openSheet();
+    }
+}
+
+function closeSheet() {
+    bottomSheet.classList.remove('open');
+    sheetOverlay.classList.remove('active');
+    document.getElementById('sheetInput').value = '';
+    activeFeedbackMessageId = null;
+}
+
+
+
+function findConversationByMessageId(messageId) {
+    for (const conversation of conversations.values()) {
+        const hasMessage = conversation.messages.some(function (message) {
+            return message.id === messageId;
+        });
+        if (hasMessage) return conversation;
+    }
+    return null;
+}
+
+function getQueryForMessage(conversation, messageId) {
+    const index = conversation.messages.findIndex(function (message) {
+        return message.id === messageId;
+    });
+    if (index <= 0) return null;
+    return conversation.messages[index - 1].content;
+}
 
 // -------Sidebar Toggle -----------
 
@@ -258,6 +373,15 @@ historyList.addEventListener('click', handleSidebarClick);
 const bottomSheet = document.getElementById('bottomSheet');
 const sheetOverlay = document.getElementById('sheetOverlay');
 const sheetClose = document.getElementById('sheetClose');
+const sheetInput = document.getElementById('sheetInput');
+const sheetSubmit = document.getElementById('sheetSubmit');
+
+function updateSubmitButtonState() {
+    const hasText = sheetInput.value.trim() !== '';
+    sheetSubmit.disabled = !hasText;
+}
+
+sheetInput.addEventListener('input', updateSubmitButtonState);
 
 function openSheet() {
     bottomSheet.classList.add('open');
@@ -434,3 +558,57 @@ function restoreFromStorage() {
 restoreFromStorage();
 
 
+const THANKS_DISPLAY_DURATION_MS = 1500;
+
+function sendCorrectionFeedback(messageId, conversationId, correctSolution,query, answer) {
+    fetch('/feedback/correction', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            message_id: messageId,
+            conversation_id: conversationId,
+            correct_solution: correctSolution,
+            query,
+            answer,
+        }),
+    }).catch(function (err) {
+        console.warn('Failed to send correction feedback:', err);
+    });
+}
+
+function showThanksView() {
+    sheetInputView.classList.add('hidden');
+    sheetThanksView.classList.add('visible');
+}
+
+function handleSheetSubmit() {
+    const correctSolution = sheetInput.value.trim();
+    if (correctSolution === '') return;
+
+    const conversation = findConversationByMessageId(activeFeedbackMessageId);
+    if (conversation === null) return;
+
+    const message = getMessageById(activeFeedbackMessageId);
+    const query = getQueryForMessage(conversation, activeFeedbackMessageId);
+
+    sendCorrectionFeedback(activeFeedbackMessageId, conversation.id, correctSolution, query, message.content);
+    showThanksView();
+    setTimeout(closeSheet, THANKS_DISPLAY_DURATION_MS);
+}
+
+sheetSubmit.addEventListener('click', handleSheetSubmit);
+
+
+function resetSheetToInputView() {
+    sheetInputView.classList.remove('hidden');
+    sheetThanksView.classList.remove('visible');
+}
+
+function openSheet() {
+    resetSheetToInputView();
+    bottomSheet.classList.add('open');
+    sheetOverlay.classList.add('active');
+    sheetInput.value = '';
+    updateSubmitButtonState();
+    document.getElementById('sheetInput').focus();
+}

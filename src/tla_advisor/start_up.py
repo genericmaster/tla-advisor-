@@ -6,7 +6,7 @@ from tla_advisor.retrieval.embedder import OllamaEmbedder
 from chromadb import PersistentClient
 from tla_advisor.retrieval.vector_store import ChromaVectorStore
 from tla_advisor.generator.generation import OllamaGenerator
-from config import EMBEDDER_NAME,GENERATOR_NAME,ASSISTANT,COLLECTION_NAME,DATA_PATH
+from config import EMBEDDER_NAME,GENERATOR_NAME,ASSISTANT,COLLECTION_NAME,DATA_PATH,REGULARISER_MODEL_NAME,REGULARISER_SYSTEM_PROMPT
 from tla_advisor.pipeline import RAGPipeline
 
 logging.basicConfig(level="INFO",format="%(asctime)s %(levelname)s %(name)s — %(message)s" ,handlers=[logging.FileHandler("logs/start_up.log")],force=True)
@@ -32,6 +32,8 @@ logger.info("vector database called successflly ")
 
 generator = OllamaGenerator(model_name=GENERATOR_NAME,system_prompt=ASSISTANT,client=ollama_client_instance)
 logger.info("text generation called successfully")
+
+regulariser_generator = OllamaGenerator(model_name=REGULARISER_MODEL_NAME,system_prompt=REGULARISER_SYSTEM_PROMPT,client=ollama_client_instance)
 
 pipeline = RAGPipeline(
     embedder=embedding_model,
