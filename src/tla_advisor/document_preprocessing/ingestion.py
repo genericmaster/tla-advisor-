@@ -1,7 +1,7 @@
 
 from pathlib import Path
 from tla_advisor.document_preprocessing.loader_factory import get_loader
-from tla_advisor.retrieval.start_up import vector_store,embedding_model
+from tla_advisor.start_up import vector_store,embedding_model
 from tla_advisor.document_preprocessing.splitter import text_splitting
 sources = ['data/source_docs/TLA STAFF SUPPORT HANDBOOK.pdf','data/source_docs/BCDR_Tasks.txt']
 

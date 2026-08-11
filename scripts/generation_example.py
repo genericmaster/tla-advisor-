@@ -1,5 +1,4 @@
 import ollama
-import json
 import time
 query = "the vpn is not working "
 context = """1. Trouble connecting to the VPN. 

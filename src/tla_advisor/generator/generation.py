@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 class Generator(ABC):
     @abstractmethod
-    def generate(self,prompt:str)->Iterator[str]:
+    def generate(self,prompt:str,history:list[dict])->Iterator[str]:
         pass
 
 
@@ -17,23 +17,20 @@ class OllamaGenerator(Generator):
         self.client = client
         self.model_name = model_name
         self.system_prompt = system_prompt
+      
 
-    def generate(self, prompt:str)->Iterator[str]:
+    def generate(self, prompt:str,history:list[dict])->Iterator[str]:
         try:
             response =self.client.chat(
                 model=self.model_name,
                 stream=True,
                 think=False,
-                messages = [
-                            {
-                                "role": "system",
-                                "content": self.system_prompt
-                            },
-                            {
-                                "role": "user",
-                                "content": prompt
-                            }
-                        ])
+                messages = (
+                        [{"role": "system", "content": self.system_prompt}]
+                        + history[-6:]
+                        + [{"role": "user", "content": prompt}]
+                        )
+                )
          
             for chunk in response:
                 content = chunk.message.content
