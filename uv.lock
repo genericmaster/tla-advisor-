@@ -2131,6 +2131,7 @@ name = "tla-advisor"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "bcrypt" },
     { name = "chromadb" },
     { name = "fastapi" },
     { name = "langchain-text-splitters" },
@@ -2142,6 +2143,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "bcrypt", specifier = ">=5.0.0" },
     { name = "chromadb", specifier = ">=1.5.9" },
     { name = "fastapi", specifier = ">=0.139.0" },
     { name = "langchain-text-splitters", specifier = ">=1.1.2" },
