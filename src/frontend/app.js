@@ -1,11 +1,14 @@
 // ─── Data model ───────────────────────────────────────────────────────────────
 const conversations = new Map();
 let currentConversationId = null;
+function generateId() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
 
 function createConversation() {
     const now = Date.now();
     return {
-        id: crypto.randomUUID(),
+        id: generateId(),
         title: null,
         messages: [],
         createdAt: now,
@@ -15,7 +18,7 @@ function createConversation() {
 
 function createMessage(role, content, error = false) {
     return {
-        id: crypto.randomUUID(),
+        id: generateId(),
         role,
         rating: null,
         content,
@@ -33,6 +36,19 @@ function appendMessageToCurrent(message) {
     const conversation = getCurrentConversation();
     conversation.messages.push(message);
     conversation.updatedAt = Date.now();
+}
+
+function deleteConversation(conversationId) {
+    conversations.delete(conversationId);
+    if (currentConversationId === conversationId) {
+        currentConversationId = null;
+    }
+}
+
+function renameConversation(conversationId, newTitle) {
+    const conversation = conversations.get(conversationId);
+    if (conversation === undefined) return;
+    conversation.title = newTitle;
 }
 
 
@@ -167,7 +183,7 @@ function appendAssistantBubble(message) {
     wrapper.appendChild(bubble);
     wrapper.appendChild(feedback);
     messagesEl.appendChild(wrapper);
-    
+
 }
 
 function getSelectedFeedbackClass(rating, buttonType) {
@@ -209,23 +225,6 @@ function getMessageById(messageId) {
 function toggleMessageRating(message, clickedRating) {
     message.rating = message.rating === clickedRating ? null : clickedRating;
 }
-
-function handleFeedbackClick(event) {
-    const button = event.target.closest('.feedback-btn');
-    if (button === null) return;
-
-    const feedbackEl = button.closest('.feedback');
-    const messageId = feedbackEl.dataset.messageId;
-    const message = getMessageById(messageId);
-    if (message === null) return;
-
-    const clickedRating = button.classList.contains('feedback-btn--up') ? 'positive' : 'negative';
-    toggleMessageRating(message, clickedRating);
-    applyFeedbackSelection(feedbackEl, message.rating);
-    saveState();
-}
-
-messagesEl.addEventListener('click', handleFeedbackClick);
 
 function scrollToBottom() {
     messagesEl.scrollTop = messagesEl.scrollHeight;
@@ -271,6 +270,8 @@ function handleFeedbackClick(event) {
         openSheet();
     }
 }
+
+messagesEl.addEventListener('click', handleFeedbackClick);
 
 function closeSheet() {
     bottomSheet.classList.remove('open');
@@ -323,14 +324,25 @@ sidebarOverlay.addEventListener('click', closeSidebar);
 
 // ─── Sidebar history ──────────────────────────────────────────────────────────
 const historyList = document.querySelector('.history-list');
+let openEntryMenuId = null;
 
 function refreshSidebar() {
     historyList.innerHTML = '';
+    openEntryMenuId = null;
     const entries = getSortedConversations();
     for (const conversation of entries) {
         if (conversation.title === null) continue;
         historyList.appendChild(buildSidebarEntry(conversation));
     }
+}
+
+const chatTitleEl = document.querySelector('.chat-title');
+
+function updateHeaderTitle() {
+    const conversation = getCurrentConversation();
+    chatTitleEl.textContent = (conversation !== null && conversation.title !== null)
+        ? conversation.title
+        : 'New Chat';
 }
 
 function getSortedConversations() {
@@ -341,16 +353,126 @@ function getSortedConversations() {
 
 function buildSidebarEntry(conversation) {
     const li = document.createElement('li');
+    li.className = 'history-entry';
     li.dataset.conversationId = conversation.id;
-    li.textContent = conversation.title;
     if (conversation.id === currentConversationId) {
         li.classList.add('history-entry--active');
     }
+
+    const titleEl = document.createElement('span');
+    titleEl.className = 'history-entry-title';
+    titleEl.textContent = conversation.title;
+
+    const optionsBtn = document.createElement('button');
+    optionsBtn.className = 'history-entry-options';
+    optionsBtn.setAttribute('aria-label', 'Conversation options');
+    optionsBtn.textContent = '⋮';
+
+    const menu = document.createElement('div');
+    menu.className = 'history-entry-menu';
+    menu.innerHTML = `
+        <button class="history-entry-menu-item history-entry-menu-item--rename">Rename</button>
+        <button class="history-entry-menu-item history-entry-menu-item--delete">Delete</button>
+    `;
+
+    li.appendChild(titleEl);
+    li.appendChild(optionsBtn);
+    li.appendChild(menu);
     return li;
 }
 
+function closeEntryMenu() {
+    const openMenu = historyList.querySelector('.history-entry-menu.open');
+    if (openMenu !== null) {
+        openMenu.classList.remove('open');
+    }
+    openEntryMenuId = null;
+}
+
+function toggleEntryMenu(entry) {
+    const conversationId = entry.dataset.conversationId;
+
+    if (openEntryMenuId === conversationId) {
+        closeEntryMenu();
+        return;
+    }
+
+    closeEntryMenu();
+    entry.querySelector('.history-entry-menu').classList.add('open');
+    openEntryMenuId = conversationId;
+}
+
+function handleDeleteClick(entry) {
+    const conversationId = entry.dataset.conversationId;
+    const confirmed = confirm('Delete this conversation? This cannot be undone.');
+    if (!confirmed) return;
+
+    deleteConversation(conversationId);
+    closeEntryMenu();
+    renderChatArea();
+    updateHeaderTitle();
+    refreshSidebar();
+    saveState();
+}
+
+function startEntryRename(entry) {
+    closeEntryMenu();
+
+    const conversationId = entry.dataset.conversationId;
+    const titleEl = entry.querySelector('.history-entry-title');
+    const currentTitle = titleEl.textContent;
+
+    const input = document.createElement('input');
+    input.className = 'history-entry-rename-input';
+    input.type = 'text';
+    input.value = currentTitle;
+
+    titleEl.replaceWith(input);
+    input.focus();
+    input.select();
+
+    function commitRename() {
+        const newTitle = input.value.trim();
+        if (newTitle !== '') {
+            renameConversation(conversationId, newTitle);
+            saveState();
+            if (conversationId === currentConversationId) {
+                updateHeaderTitle();
+            }
+        }
+        refreshSidebar();
+    }
+
+    input.addEventListener('blur', commitRename);
+    input.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') {
+            input.blur();
+        } else if (event.key === 'Escape') {
+            input.removeEventListener('blur', commitRename);
+            refreshSidebar();
+        }
+    });
+}
+
 function handleSidebarClick(event) {
-    console.log('sidebar click fired', event.target);
+    const deleteBtn = event.target.closest('.history-entry-menu-item--delete');
+    if (deleteBtn !== null) {
+        handleDeleteClick(deleteBtn.closest('[data-conversation-id]'));
+        return;
+    }
+
+    const renameBtn = event.target.closest('.history-entry-menu-item--rename');
+    if (renameBtn !== null) {
+        startEntryRename(renameBtn.closest('[data-conversation-id]'));
+        return;
+    }
+
+    const optionsBtn = event.target.closest('.history-entry-options');
+    if (optionsBtn !== null) {
+        toggleEntryMenu(optionsBtn.closest('[data-conversation-id]'));
+        return;
+    }
+
     const entry = event.target.closest('[data-conversation-id]');
     if (entry === null) return;
     const conversationId = entry.dataset.conversationId;
@@ -360,6 +482,7 @@ function handleSidebarClick(event) {
     }
     currentConversationId = conversationId;
     renderChatArea();
+    updateHeaderTitle();
     closeSidebar();
     refreshSidebar();
     saveState();
@@ -367,6 +490,15 @@ function handleSidebarClick(event) {
 
 historyList.addEventListener('click', handleSidebarClick);
 
+// ─── Logout ─────────────────────────────────────────────────────────────────
+const logoutBtn = document.getElementById('logoutBtn');
+
+async function handleLogout() {
+    await fetch('/logout', { method: 'POST' });
+    window.location.href = '/login.html';
+}
+
+logoutBtn.addEventListener('click', handleLogout);
 
 // ─── Bottom sheet ───
 
@@ -384,8 +516,11 @@ function updateSubmitButtonState() {
 sheetInput.addEventListener('input', updateSubmitButtonState);
 
 function openSheet() {
+    resetSheetToInputView();
     bottomSheet.classList.add('open');
     sheetOverlay.classList.add('active');
+    sheetInput.value = '';
+    updateSubmitButtonState();
     document.getElementById('sheetInput').focus();
 }
 
@@ -404,38 +539,39 @@ sheetOverlay.addEventListener('click', closeSheet);
 const sendBtn = document.querySelector('.send-btn');
 const messageInput = document.querySelector('.message-input');
 
-const TITLE_MAX_LENGTH = 40;
 let isRequestInFlight = false;
 
 async function sendQuery() {
-    if (isRequestInFlight) return;
-    const userText = messageInput.value.trim();
-    if (userText === '') return;
-
-    isRequestInFlight = true;
-    sendBtn.classList.add('sending');
-    messageInput.value = '';
-
-    ensureCurrentConversation();
-    const userMessage = createMessage('user', userText);
-    appendMessageToCurrent(userMessage);
-    setTitleIfMissing(userText);
-    refreshSidebar();
-    hideEmptyState();
-    appendMessageBubble(userMessage);
-    scrollToBottom();
-
-    const assistantMessage = createMessage('assistant', '');
-    appendMessageToCurrent(assistantMessage);
-    appendMessageBubble(assistantMessage);
-    const assistantBubble = getBubbleElement(assistantMessage.id);
-    scrollToBottom();
-
     try {
+        if (isRequestInFlight) return;
+        const userText = messageInput.value.trim();
+        if (userText === '') return;
+
+        isRequestInFlight = true;
+        sendBtn.classList.add('sending');
+        messageInput.value = '';
+
+        ensureCurrentConversation();
+        const userMessage = createMessage('user', userText);
+        appendMessageToCurrent(userMessage);
+        hideEmptyState();
+        appendMessageBubble(userMessage);
+        scrollToBottom();
+
+        const assistantMessage = createMessage('assistant', '');
+        appendMessageToCurrent(assistantMessage);
+        appendMessageBubble(assistantMessage);
+        const assistantBubble = getBubbleElement(assistantMessage.id);
+        scrollToBottom();
+
         const responseText = await streamAssistantResponse(userText, assistantBubble);
         assistantMessage.content = responseText;
-    } catch (err) {
-        assistantMessage.content = `Error: ${err.message}`;
+        if (shouldSetTitleNow()) {
+            setTitleIfMissing(responseText);
+        }
+        updateHeaderTitle();
+    } catch (error) {
+        assistantMessage.content = `Error: ${error.message}`;
         assistantMessage.error = true;
         assistantBubble.textContent = assistantMessage.content;
     } finally {
@@ -443,6 +579,7 @@ async function sendQuery() {
         sendBtn.classList.remove('sending');
         saveState();
         refreshSidebar();
+        updateHeaderTitle();
     }
 }
 
@@ -453,6 +590,14 @@ function ensureCurrentConversation() {
     currentConversationId = conversation.id;
 }
 
+function shouldSetTitleNow() {
+    const conversation = getCurrentConversation();
+    const userMessageCount = conversation.messages.filter(function (message) {
+        return message.role === 'user';
+    }).length;
+    return userMessageCount >= 2;
+}
+
 function setTitleIfMissing(firstUserText) {
     const conversation = getCurrentConversation();
     if (conversation.title !== null) return;
@@ -460,8 +605,9 @@ function setTitleIfMissing(firstUserText) {
 }
 
 function truncateTitle(text) {
-    if (text.length <= TITLE_MAX_LENGTH) return text;
-    return text.slice(0, TITLE_MAX_LENGTH) + '…';
+    const words = text.trim().split(/\s+/);
+    if (words.length <= 5) return text.trim();
+    return words.slice(0, 5).join(' ') + '…';
 }
 
 function getBubbleElement(messageId) {
@@ -516,7 +662,7 @@ messageInput.addEventListener('keydown', function (event) {
 });
 
 
-// ─── Dark mode ─── 
+// ─── Dark mode ───
 const themeToggle = document.getElementById('darkModeToggle');
 
 const savedTheme = localStorage.getItem('theme');
@@ -537,6 +683,7 @@ const newChatBtn = document.getElementById('newChatBtn');
 function handleNewChat() {
     currentConversationId = null;
     renderChatArea();
+    updateHeaderTitle();
     refreshSidebar();
     closeSidebar();
     saveState();
@@ -553,6 +700,7 @@ function restoreFromStorage() {
     }
     refreshSidebar();
     renderChatArea();
+    updateHeaderTitle();
 }
 
 restoreFromStorage();
@@ -560,7 +708,7 @@ restoreFromStorage();
 
 const THANKS_DISPLAY_DURATION_MS = 1500;
 
-function sendCorrectionFeedback(messageId, conversationId, correctSolution,query, answer) {
+function sendCorrectionFeedback(messageId, conversationId, correctSolution, query, answer) {
     fetch('/feedback/correction', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -602,13 +750,4 @@ sheetSubmit.addEventListener('click', handleSheetSubmit);
 function resetSheetToInputView() {
     sheetInputView.classList.remove('hidden');
     sheetThanksView.classList.remove('visible');
-}
-
-function openSheet() {
-    resetSheetToInputView();
-    bottomSheet.classList.add('open');
-    sheetOverlay.classList.add('active');
-    sheetInput.value = '';
-    updateSubmitButtonState();
-    document.getElementById('sheetInput').focus();
 }

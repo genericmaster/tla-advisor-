@@ -14,3 +14,5 @@ Notes for future writeup:
 
   -generator classes must stay decoupled
   - using the same client decison
+
+  

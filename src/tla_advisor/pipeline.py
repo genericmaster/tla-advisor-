@@ -14,7 +14,7 @@ class RAGPipeline:
         self.generator = generator
     
     def answer(self, query: str,history:list[dict]) -> Iterator[str]:
-        logger.info(f"query received: {query}")
+        logger.info("query received")
         
         t0=time.time()
         

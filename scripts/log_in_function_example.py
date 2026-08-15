@@ -1,8 +1,9 @@
 import sqlite3
 import bcrypt
 from hashing_example import hash_password
+from config import TLA_DB_PATH
 
-database=sqlite3.connect(r"data\database\users.db")
+database=sqlite3.connect(TLA_DB_PATH)
 
 password = "2"
 def check_login(database,staff_number, password_attempt):
