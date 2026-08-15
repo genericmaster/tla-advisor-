@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TLA Advisor — Admin</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="/admin.css">
+</head>
+<body>
+
+    <!-- Sidebar overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Slide-in sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <span>TLA ADMIN</span>
+            <button class="sidebar-close" id="sidebarClose" aria-label="Close menu">✕</button>
+        </div>
+        <nav class="sidebar-nav">
+            <button class="logout-btn" id="logoutBtn">Log out</button>
+            <p class="sidebar-section-label">Review</p>
+            <ul class="admin-nav-list">
+                <li class="admin-nav-item admin-nav-item--active">
+                    Pending Corrections
+                    <span class="admin-nav-count" id="pendingCount">0</span>
+                </li>
+            </ul>
+        </nav>
+    </aside>
+
+    <!-- Main admin panel -->
+    <div class="admin-panel">
+
+        <!-- Fixed header -->
+        <header class="admin-header">
+            <button class="menu-btn" id="menuBtn" aria-label="Open menu">☰</button>
+            <h1 class="admin-title">Pending Corrections</h1>
+            <button class="admin-refresh-btn" id="refreshBtn" aria-label="Refresh">↻</button>
+        </header>
+
+        <!-- Scrollable queue area -->
+        <main class="admin-queue" id="queue">
+            <div class="admin-empty-state" id="emptyState">
+                <p>Nothing waiting on you right now.</p>
+                <p class="admin-empty-hint">Approved corrections will appear here for review before joining the corpus.</p>
+            </div>
+        </main>
+
+    </div>
+
+    <script src="/admin.js"></script>
+</body>
+</html>

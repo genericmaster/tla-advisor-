@@ -12,10 +12,11 @@ def evaluate_correction(query:str, answer:str, correct_solution:str) -> dict:
         response = "".join(request)
         response_dict=json.loads(response)
         logger.info("regulariser successful")
-        print(response_dict)
         return response_dict
     except Exception as e:
-        logger.error(f"regulariser failed as : {e}")
+         logger.error(f"regulariser failed as : {e}")
+         return {"verdict": "rejected", "rejection_reason": "unparseable", "solution_markdown": None}
+    
         
 
 

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TLA Advisor — Login</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="/login.css">
+</head>
+<body>
+
+    <main class="login-panel">
+        <h1 class="login-title">TLA Advisor</h1>
+        <form id="loginForm" class="login-form">
+            <input
+                class="login-input"
+                type="text"
+                id="staffNumber"
+                placeholder="Staff number"
+                autocomplete="username"
+            >
+            <input
+                class="login-input"
+                type="password"
+                id="password"
+                placeholder="Password"
+                autocomplete="current-password"
+            >
+            <button class="login-submit" id="loginSubmit" type="submit">Log in</button>
+            <p class="login-error" id="loginError"></p>
+        </form>
+    </main>
+
+    <script src="/login.js"></script>
+</body>
+</html>
