@@ -9,7 +9,7 @@ COLLECTION_NAME = "first_proper_collection"
 DATA_PATH =Path("data")/"persistent_data"
 TLA_DB_PATH = Path("data") / "database" / "users.db"
 PENDING_CORRECTIONS_PATH= Path("data")/"pending_corrections"
-
+SAMBA_CORRECTIONS_PATH = Path("Z:\\")
 #CHUNKER.PY
 CHUNK_SIZE = 3000
 CHUNK_OVERLAP=150

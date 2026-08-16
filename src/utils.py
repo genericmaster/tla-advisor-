@@ -3,6 +3,7 @@ import bcrypt
 from pathlib import Path
 from tla_advisor.document_preprocessing.splitter import text_splitting
 from tla_advisor.start_up import embedding_model,vector_store
+from config import SAMBA_CORRECTIONS_PATH
 def check_login(database,staff_number, password_attempt):
     cur = database.cursor()
     query = cur.execute(
@@ -45,8 +46,8 @@ def approve_pending_correction(file_path: Path) -> None:
     ids = [f"{file_path.stem}_chunk_{i}" for i in range(len(chunks))]
     embed_chunk = embedding_model.embed(chunks)
     vector_store.add(ids=ids, embeddings=embed_chunk, documents=chunks)
-    
+    import shutil
+    shutil.copy(file_path, SAMBA_CORRECTIONS_PATH / file_path.name)
     file_path.unlink()
-
 def reject_pending_correction(file_path: Path) -> None:
     file_path.unlink()
