@@ -1,4 +1,5 @@
 
+import shutil
 import bcrypt
 from pathlib import Path
 from tla_advisor.document_preprocessing.splitter import text_splitting
@@ -41,13 +42,16 @@ def approve_pending_correction(file_path: Path) -> None:
         content = file.read()
     
     clean_content = content.replace("## ", "")
-    
+
     chunks = text_splitting(clean_content)
     ids = [f"{file_path.stem}_chunk_{i}" for i in range(len(chunks))]
     embed_chunk = embedding_model.embed(chunks)
     vector_store.add(ids=ids, embeddings=embed_chunk, documents=chunks)
-    import shutil
+    print(f"SOURCE: {file_path}")
+    print(f"SOURCE EXISTS: {file_path.exists()}")
+    print(f"DESTINATION: {SAMBA_CORRECTIONS_PATH / file_path.name}")
     shutil.copy(file_path, SAMBA_CORRECTIONS_PATH / file_path.name)
+
     file_path.unlink()
 def reject_pending_correction(file_path: Path) -> None:
     file_path.unlink()
