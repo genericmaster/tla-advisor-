@@ -8,12 +8,15 @@ authors = [
 ]
 requires-python = ">=3.13"
 dependencies = [
+    "bcrypt>=5.0.0",
     "chromadb>=1.5.9",
     "fastapi>=0.139.0",
     "langchain-text-splitters>=1.1.2",
     "ollama>=0.6.2",
+    "pip-audit>=2.10.1",
     "pypdf>=6.14.2",
     "python-dotenv>=1.2.2",
+    "slowapi>=0.1.10",
     "streamlit>=1.58.0",
 ]
 

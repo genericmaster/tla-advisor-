@@ -13,8 +13,8 @@ class RAGPipeline:
         self.vector_store = vector_store
         self.generator = generator
     
-    def answer(self, query: str) -> Iterator[str]:
-        logger.info(f"query received: {query}")
+    def answer(self, query: str,history:list[dict]) -> Iterator[str]:
+        logger.info("query received")
         
         t0=time.time()
         
@@ -30,5 +30,5 @@ class RAGPipeline:
         prompt = ollama_prompt_builder(query, results)
         logger.info(f"build_prompt: {time.time() - t2:.2f}s")
 
-        return self.generator.generate(prompt)
+        return self.generator.generate(prompt,history)
     

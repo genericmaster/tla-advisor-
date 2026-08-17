@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TLA Advisor</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+
+<body>
+
+    <!-- Sidebar overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Slide-in sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <span>TLA ADVISOR</span>
+            <button class="sidebar-close" id="sidebarClose" aria-label="Close menu">✕</button>
+        </div>
+        <nav class="sidebar-nav">
+            <button class="new-chat-btn" id="newChatBtn">+ New Chat</button>
+            <p class="sidebar-section-label">History</p>
+            <ul class="history-list" id="historyList"></ul>
+            <p class="sidebar-section-label">Settings</p>
+            <ul class="settings-list">
+                <li class="settings-row">
+                    <span>Dark Mode</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="darkModeToggle">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </li>
+                <li class="settings-row">
+                    <button class="logout-btn" id="logoutBtn">Log out</button>
+                </li>
+                <li>About</li>
+            </ul>
+        </nav>
+    </aside>
+
+    <!-- Main chat panel -->
+    <div class="chat-panel">
+
+        <!-- Fixed header -->
+        <header class="chat-header">
+            <button class="menu-btn" id="menuBtn" aria-label="Open menu">☰</button>
+            <h1 class="chat-title">Current Chat</h1>
+        </header>
+
+        <!-- Scrollable message area -->
+        <main class="messages" id="messages">
+            <div class="empty-state" id="emptyState">
+                <p>Ask about a support issue to get started.</p>
+                <p class="empty-hint">e.g. <em>the printer won't connect</em></p>
+            </div>
+        </main>
+
+        <!-- Fixed input area -->
+        <footer class="input-area">
+            <input class="message-input" type="text" placeholder="Describe the issue..." aria-label="Message input">
+            <button class="send-btn" aria-label="Send">Send</button>
+        </footer>
+
+    </div>
+
+    <!-- Bottom sheet overlay -->
+    <div class="sheet-overlay" id="sheetOverlay"></div>
+
+    <!-- Correction bottom sheet -->
+    <div class="bottom-sheet" id="bottomSheet">
+        <div class="sheet-header">
+            <span class="sheet-title">What actually solved this?</span>
+            <button class="sheet-close" id="sheetClose" aria-label="Close">✕</button>
+        </div>
+        <div class="sheet-body">
+            <div class="sheet-input-view" id="sheetInputView">
+                <textarea class="sheet-input" id="sheetInput" placeholder="Describe what fixed the problem..."
+                    rows="4"></textarea>
+                <button class="sheet-submit" id="sheetSubmit" disabled>Submit</button>
+            </div>
+            <div class="sheet-thanks-view" id="sheetThanksView">
+                <p>Thanks — noted.</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="/app.js"></script>
+</body>
+
+</html>
