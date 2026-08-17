@@ -220,15 +220,6 @@ def reject_correction(message_id: str, admin=Depends(require_admin)):
     return {"status": "ok"}
 
 
-
-@app.get("/admin.html")
-def serve_admin_page(request: Request):
-    session_id = request.cookies.get("RAG_COOKIE")
-    staff_number = session.get(session_id) if session_id else None
-    if staff_number is None or not is_admin(staff_number):
-        return RedirectResponse(url="/login.html")
-    return FileResponse(Path("src")/"frontend"/"index.html")
-
 @app.get("/admin.html")
 def serve_admin_page(request: Request):
     session_id = request.cookies.get("RAG_COOKIE")
