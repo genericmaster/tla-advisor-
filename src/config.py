@@ -3,7 +3,7 @@ from pathlib import Path
 #model names
 EMBEDDER_NAME = "nomic-embed-text"
 GENERATOR_NAME = "qwen3.5:9b" 
-VISION_MODEL_NAME = "qwen2.5vl:7b"
+VISION_MODEL_NAME = "qwen2.5vl:7b  "
 
 # hardcoded paths
 COLLECTION_NAME = "first_proper_collection"
