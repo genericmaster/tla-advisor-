@@ -5,6 +5,7 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 COPY uv.lock .
 COPY pyproject.toml .
 RUN uv sync --frozen --no-dev --no-install-project
+COPY . .
 COPY entrypoint.sh .
 RUN chmod +x entrypoint.sh
 ENTRYPOINT ["./entrypoint.sh"]
