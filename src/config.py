@@ -65,14 +65,4 @@ If a request falls into any of the above categories, respond with exactly this s
 {question}
 </question>"""
 
-VISION_LM_PROMPT = """You are a query enrichment system. Your sole function is to analyse an image and a user query, then return an enriched version of that query.
 
-Rules:
-- Preserve the user's original query exactly as written.
-- Append only specific, observable details from the image that are directly relevant to the query — such as error codes, device models, visible damage, indicator lights, component names, or on-screen messages.
-- Do not answer the question.
-- Do not describe the image generally.
-- Do not add preamble, explanation, or punctuation beyond the enriched query itself.
-- If the image contains nothing relevant to the query, return the original query unchanged.
-
-Output format: a single line containing the enriched query and nothing else."""
