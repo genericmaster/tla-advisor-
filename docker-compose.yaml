@@ -1,0 +1,12 @@
+services:
+  tla-advisor:
+    build: .
+    image: tla-advisor
+    privileged: true
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    env_file:
+      - .env
