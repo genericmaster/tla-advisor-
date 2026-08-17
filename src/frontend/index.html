@@ -57,12 +57,22 @@
             </div>
         </main>
 
+        <!-- Image preview bar (hidden until image is active) -->
+        <div class="image-preview-bar" id="imagePreviewBar">
+            <img class="image-preview-thumb" id="imagePreviewThumb" src="" alt="Attached image">
+            <button class="image-preview-dismiss" id="imagePreviewDismiss" aria-label="Remove image">✕</button>
+        </div>
+
         <!-- Fixed input area -->
         <footer class="input-area">
-            <input class="message-input" type="text" placeholder="Describe the issue..." aria-label="Message input">
+            <div class="message-input-wrapper">
+                <button class="image-upload-btn" id="imageUploadBtn" aria-label="Attach image">📷</button>
+                <input type="file" id="imageFileInput" accept="image/*">
+                <input class="message-input" type="text" placeholder="Describe the issue..." aria-label="Message input">
+            </div>
             <button class="send-btn" aria-label="Send">Send</button>
         </footer>
-
+        
     </div>
 
     <!-- Bottom sheet overlay -->

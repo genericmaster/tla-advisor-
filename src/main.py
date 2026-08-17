@@ -13,7 +13,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from pydantic import BaseModel
 from utils import check_login,approve_pending_correction,reject_pending_correction
-from tla_advisor.start_up import pipeline
+from tla_advisor.start_up import pipeline,generator
 from tla_advisor.feedback.feedback_path import  append_jsonl_entry,write_pending_correction
 from tla_advisor.feedback.feedback_regulariser import evaluate_correction
 from config import  FEEDBACK_RATING_PATH,FEEDBACK_CORRECTION_PATH,TLA_DB_PATH,PENDING_CORRECTIONS_PATH
@@ -30,7 +30,7 @@ async def add_csp_header(request: Request, call_next):
     response = await call_next(request)
     
     # Define and apply the CSP header string
-    csp_value = "default-src 'self'; script-src 'self'; object-src 'none';"
+    csp_value = "default-src 'self'; script-src 'self'; object-src 'none'; img-src 'self' data:;"
     response.headers["Content-Security-Policy"] = csp_value
     return response
 
@@ -51,8 +51,10 @@ class  FeedBackRatings(BaseModel):
     user_id: str |None =None 
     
 class Query(BaseModel):
-    query:str
-    history:list[dict]
+    query: str
+    history: list[dict]
+    vision_history: list[dict] = []
+    image: str | None = None
     
 class LoginRequest(BaseModel):
     staff_number: str
@@ -157,8 +159,13 @@ def logout(request: Request, response: Response):
 @app.post("/chat")
 @limiter.limit("50/minute")
 def rag(request:Request,query:Query,cookie=Depends(get_session))->StreamingResponse:
-    stream = StreamingResponse(content=stream_generator(query.query,query.history),media_type="text/plain", headers={"X-Accel-Buffering": "no", "Cache-Control": "no-cache"})
-    return stream
+    if query.image:
+         new_query=generator.vision_generation(prompt=query.query,image=query.image,history=query.vision_history)
+         stream = StreamingResponse(content=stream_generator(new_query,query.history),media_type="text/plain", headers={"X-Accel-Buffering": "no", "Cache-Control": "no-cache"})
+         return stream
+    else:
+        stream = StreamingResponse(content=stream_generator(query.query,query.history),media_type="text/plain", headers={"X-Accel-Buffering": "no", "Cache-Control": "no-cache"})
+        return stream
 
 @app.post("/feedback")
 @limiter.limit("50/minute")

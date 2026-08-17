@@ -3,13 +3,14 @@ from pathlib import Path
 #model names
 EMBEDDER_NAME = "nomic-embed-text"
 GENERATOR_NAME = "qwen3.5:9b" 
+VISION_MODEL_NAME = "qwen2.5vl:7b"
 
 # hardcoded paths
 COLLECTION_NAME = "first_proper_collection"
 DATA_PATH =Path("data")/"persistent_data"
 TLA_DB_PATH = Path("data") / "database" / "users.db"
 PENDING_CORRECTIONS_PATH= Path("data")/"pending_corrections"
-SAMBA_CORRECTIONS_PATH = Path("Z:\\")
+SAMBA_CORRECTIONS_PATH = Path("/app/samba")
 #CHUNKER.PY
 CHUNK_SIZE = 3000
 CHUNK_OVERLAP=150
@@ -63,3 +64,15 @@ If a request falls into any of the above categories, respond with exactly this s
 <question>
 {question}
 </question>"""
+
+VISION_LM_PROMPT = """You are a query enrichment system. Your sole function is to analyse an image and a user query, then return an enriched version of that query.
+
+Rules:
+- Preserve the user's original query exactly as written.
+- Append only specific, observable details from the image that are directly relevant to the query — such as error codes, device models, visible damage, indicator lights, component names, or on-screen messages.
+- Do not answer the question.
+- Do not describe the image generally.
+- Do not add preamble, explanation, or punctuation beyond the enriched query itself.
+- If the image contains nothing relevant to the query, return the original query unchanged.
+
+Output format: a single line containing the enriched query and nothing else."""

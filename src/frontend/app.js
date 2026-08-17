@@ -16,12 +16,13 @@ function createConversation() {
     };
 }
 
-function createMessage(role, content, error = false) {
+function createMessage(role, content, image = null, error = false) {
     return {
         id: generateId(),
         role,
         rating: null,
         content,
+        image,
         createdAt: Date.now(),
         error,
     };
@@ -51,11 +52,51 @@ function renameConversation(conversationId, newTitle) {
     conversation.title = newTitle;
 }
 
+// ─── Image state ──────────────────────────────────────────────────────────────
+let activeImage = null;
 
+function encodeImage(file) {
+    return new Promise(function (resolve, reject) {
+        const reader = new FileReader();
+        reader.onload = function () {
+            resolve(reader.result);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+function clearPreviousImages() {
+    const conversation = getCurrentConversation();
+    if (conversation === null) return;
+    for (const message of conversation.messages) {
+        if (message.image !== null) {
+            message.image = null;
+        }
+    }
+}
+
+function clearActiveImage() {
+    activeImage = null;
+    imagePreviewBar.classList.remove('visible');
+    imagePreviewThumb.src = activeImage;
+    imageFileInput.value = '';
+}
+
+function buildVisionHistory() {
+    const conversation = getCurrentConversation();
+    if (conversation === null) return [];
+    return conversation.messages
+        .filter(function (message) { return message.image !== null && message.error === false; })
+        .slice(0, -1)
+        .slice(-6)
+        .map(function (message) {
+            return { role: message.role, content: message.content, images: [message.image] };
+        });
+}
 
 // ─── Persistence ──────────────────────────────────────────────────────────────
 const CONVERSATIONS_KEY = 'tla_conversations';
-const CURRENT_ID_KEY = 'tla_current_conversation_id';
 
 function saveState() {
     try {
@@ -114,8 +155,6 @@ function isValidConversation(conversation) {
 }
 
 
-
-
 // ─── Rendering ────────────────────────────────────────────────────────────────
 const messagesEl = document.getElementById('messages');
 const emptyState = document.getElementById('emptyState');
@@ -163,7 +202,18 @@ function appendUserBubble(message) {
 
     const bubble = document.createElement('div');
     bubble.className = 'bubble';
-    bubble.textContent = message.content;
+
+    if (message.image !== null) {
+        const thumb = document.createElement('img');
+        thumb.className = 'bubble-image-thumb';
+        thumb.src = message.image;
+        thumb.alt = 'Attached image';
+        bubble.appendChild(thumb);
+    }
+
+    const text = document.createElement('span');
+    text.textContent = message.content;
+    bubble.appendChild(text);
 
     wrapper.appendChild(bubble);
     messagesEl.appendChild(wrapper);
@@ -183,7 +233,6 @@ function appendAssistantBubble(message) {
     wrapper.appendChild(bubble);
     wrapper.appendChild(feedback);
     messagesEl.appendChild(wrapper);
-
 }
 
 function getSelectedFeedbackClass(rating, buttonType) {
@@ -211,7 +260,6 @@ function buildFeedbackControls(message) {
     return feedback;
 }
 
-
 function getMessageById(messageId) {
     for (const conversation of conversations.values()) {
         const found = conversation.messages.find(function (message) {
@@ -231,6 +279,7 @@ function scrollToBottom() {
 }
 
 let activeFeedbackMessageId = null;
+
 function sendRatingFeedback(message, conversationId, query) {
     fetch('/feedback', {
         method: 'POST',
@@ -273,15 +322,6 @@ function handleFeedbackClick(event) {
 
 messagesEl.addEventListener('click', handleFeedbackClick);
 
-function closeSheet() {
-    bottomSheet.classList.remove('open');
-    sheetOverlay.classList.remove('active');
-    document.getElementById('sheetInput').value = '';
-    activeFeedbackMessageId = null;
-}
-
-
-
 function findConversationByMessageId(messageId) {
     for (const conversation of conversations.values()) {
         const hasMessage = conversation.messages.some(function (message) {
@@ -300,8 +340,7 @@ function getQueryForMessage(conversation, messageId) {
     return conversation.messages[index - 1].content;
 }
 
-// -------Sidebar Toggle -----------
-
+// ─── Sidebar toggle ───────────────────────────────────────────────────────────
 const sidebar = document.getElementById('sidebar');
 const sidebarOverlay = document.getElementById('sidebarOverlay');
 const menuBtn = document.getElementById('menuBtn');
@@ -391,12 +430,10 @@ function closeEntryMenu() {
 
 function toggleEntryMenu(entry) {
     const conversationId = entry.dataset.conversationId;
-
     if (openEntryMenuId === conversationId) {
         closeEntryMenu();
         return;
     }
-
     closeEntryMenu();
     entry.querySelector('.history-entry-menu').classList.add('open');
     openEntryMenuId = conversationId;
@@ -406,7 +443,6 @@ function handleDeleteClick(entry) {
     const conversationId = entry.dataset.conversationId;
     const confirmed = confirm('Delete this conversation? This cannot be undone.');
     if (!confirmed) return;
-
     deleteConversation(conversationId);
     closeEntryMenu();
     renderChatArea();
@@ -417,7 +453,6 @@ function handleDeleteClick(entry) {
 
 function startEntryRename(entry) {
     closeEntryMenu();
-
     const conversationId = entry.dataset.conversationId;
     const titleEl = entry.querySelector('.history-entry-title');
     const currentTitle = titleEl.textContent;
@@ -490,7 +525,7 @@ function handleSidebarClick(event) {
 
 historyList.addEventListener('click', handleSidebarClick);
 
-// ─── Logout ─────────────────────────────────────────────────────────────────
+// ─── Logout ───────────────────────────────────────────────────────────────────
 const logoutBtn = document.getElementById('logoutBtn');
 
 async function handleLogout() {
@@ -500,8 +535,33 @@ async function handleLogout() {
 
 logoutBtn.addEventListener('click', handleLogout);
 
-// ─── Bottom sheet ───
+// ─── Image upload ─────────────────────────────────────────────────────────────
+const imageUploadBtn = document.getElementById('imageUploadBtn');
+const imageFileInput = document.getElementById('imageFileInput');
+const imagePreviewBar = document.getElementById('imagePreviewBar');
+const imagePreviewThumb = document.getElementById('imagePreviewThumb');
+const imagePreviewDismiss = document.getElementById('imagePreviewDismiss');
 
+imageUploadBtn.addEventListener('click', function () {
+    imageFileInput.click();
+});
+
+imageFileInput.addEventListener('change', async function () {
+    const file = imageFileInput.files[0];
+    if (file === undefined) return;
+    clearPreviousImages();
+    activeImage = await encodeImage(file);
+    imagePreviewThumb.src = activeImage;
+    imagePreviewBar.classList.add('visible');
+    saveState();
+});
+
+imagePreviewDismiss.addEventListener('click', function () {
+    clearActiveImage();
+    saveState();
+});
+
+// ─── Bottom sheet ─────────────────────────────────────────────────────────────
 const bottomSheet = document.getElementById('bottomSheet');
 const sheetOverlay = document.getElementById('sheetOverlay');
 const sheetClose = document.getElementById('sheetClose');
@@ -528,11 +588,11 @@ function closeSheet() {
     bottomSheet.classList.remove('open');
     sheetOverlay.classList.remove('active');
     document.getElementById('sheetInput').value = '';
+    activeFeedbackMessageId = null;
 }
 
 sheetClose.addEventListener('click', closeSheet);
 sheetOverlay.addEventListener('click', closeSheet);
-
 
 
 // ─── Send query ───────────────────────────────────────────────────────────────
@@ -542,6 +602,9 @@ const messageInput = document.querySelector('.message-input');
 let isRequestInFlight = false;
 
 async function sendQuery() {
+    let assistantMessage = null;
+    let assistantBubble = null;
+
     try {
         if (isRequestInFlight) return;
         const userText = messageInput.value.trim();
@@ -551,29 +614,33 @@ async function sendQuery() {
         sendBtn.classList.add('sending');
         messageInput.value = '';
 
+        const imageForThisMessage = activeImage;
+
         ensureCurrentConversation();
-        const userMessage = createMessage('user', userText);
+        const userMessage = createMessage('user', userText, imageForThisMessage);
         appendMessageToCurrent(userMessage);
         hideEmptyState();
         appendMessageBubble(userMessage);
         scrollToBottom();
 
-        const assistantMessage = createMessage('assistant', '');
+        assistantMessage = createMessage('assistant', '');
         appendMessageToCurrent(assistantMessage);
         appendMessageBubble(assistantMessage);
-        const assistantBubble = getBubbleElement(assistantMessage.id);
+        assistantBubble = getBubbleElement(assistantMessage.id);
         scrollToBottom();
 
-        const responseText = await streamAssistantResponse(userText, assistantBubble);
+        const responseText = await streamAssistantResponse(userText, imageForThisMessage, assistantBubble);
         assistantMessage.content = responseText;
         if (shouldSetTitleNow()) {
             setTitleIfMissing(responseText);
         }
         updateHeaderTitle();
     } catch (error) {
-        assistantMessage.content = `Error: ${error.message}`;
-        assistantMessage.error = true;
-        assistantBubble.textContent = assistantMessage.content;
+        if (assistantMessage !== null) {
+            assistantMessage.content = `Error: ${error.message}`;
+            assistantMessage.error = true;
+            assistantBubble.textContent = assistantMessage.content;
+        }
     } finally {
         isRequestInFlight = false;
         sendBtn.classList.remove('sending');
@@ -598,10 +665,10 @@ function shouldSetTitleNow() {
     return userMessageCount >= 2;
 }
 
-function setTitleIfMissing(firstUserText) {
+function setTitleIfMissing(text) {
     const conversation = getCurrentConversation();
     if (conversation.title !== null) return;
-    conversation.title = truncateTitle(firstUserText);
+    conversation.title = truncateTitle(text);
 }
 
 function truncateTitle(text) {
@@ -616,6 +683,7 @@ function getBubbleElement(messageId) {
 }
 
 function buildHistoryPayload() {
+    // LLM history — text-only turns, no image data
     const conversation = getCurrentConversation();
     return conversation.messages
         .filter(function (message) { return message.error === false; })
@@ -626,11 +694,18 @@ function buildHistoryPayload() {
         });
 }
 
-async function streamAssistantResponse(query, bubble) {
+async function streamAssistantResponse(query, image, bubble) {
+    const payload = {
+        query,
+        history: buildHistoryPayload(),
+        vision_history: buildVisionHistory(),
+        image: image !== null ? image.split(',')[1] : undefined,
+    };
+
     const response = await fetch('/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query, history: buildHistoryPayload() }),
+        body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
@@ -652,7 +727,6 @@ async function streamAssistantResponse(query, bubble) {
     return fullText;
 }
 
-// send button event listeners
 sendBtn.addEventListener('click', sendQuery);
 messageInput.addEventListener('keydown', function (event) {
     if (event.key === 'Enter' && !event.shiftKey) {
@@ -662,7 +736,7 @@ messageInput.addEventListener('keydown', function (event) {
 });
 
 
-// ─── Dark mode ───
+// ─── Dark mode ────────────────────────────────────────────────────────────────
 const themeToggle = document.getElementById('darkModeToggle');
 
 const savedTheme = localStorage.getItem('theme');
@@ -682,6 +756,7 @@ const newChatBtn = document.getElementById('newChatBtn');
 
 function handleNewChat() {
     currentConversationId = null;
+    clearActiveImage();
     renderChatArea();
     updateHeaderTitle();
     refreshSidebar();
@@ -706,6 +781,7 @@ function restoreFromStorage() {
 restoreFromStorage();
 
 
+// ─── Correction feedback ──────────────────────────────────────────────────────
 const THANKS_DISPLAY_DURATION_MS = 1500;
 
 function sendCorrectionFeedback(messageId, conversationId, correctSolution, query, answer) {
@@ -745,7 +821,6 @@ function handleSheetSubmit() {
 }
 
 sheetSubmit.addEventListener('click', handleSheetSubmit);
-
 
 function resetSheetToInputView() {
     sheetInputView.classList.remove('hidden');

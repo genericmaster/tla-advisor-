@@ -29,6 +29,6 @@ class RAGPipeline:
         t2 =time.time()   
         prompt = ollama_prompt_builder(query, results)
         logger.info(f"build_prompt: {time.time() - t2:.2f}s")
-
         return self.generator.generate(prompt,history)
+        
     
