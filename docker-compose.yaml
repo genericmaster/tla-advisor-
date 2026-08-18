@@ -8,5 +8,6 @@ services:
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
+      - ./src/tla_advisor/feedback:/app/src/tla_advisor/feedback
     env_file:
       - .env
