@@ -24,6 +24,7 @@ def check_login(database,staff_number, password_attempt):
         return True
     else:
         return False
+ 
     
     
 #hashing function

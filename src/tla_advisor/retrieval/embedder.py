@@ -1,8 +1,9 @@
 import logging
 from abc import ABC,abstractmethod
 from ollama import Client
-
 logger = logging.getLogger(__name__)
+
+"abstract method that defines how any other embedder model provider should be handled"
 class Embedder(ABC):
     @abstractmethod
     def embed(self,text:list[str])->list[list[float]]:
@@ -20,7 +21,6 @@ class OllamaEmbedder(Embedder):
              logger.warning(f"embed returned empty — {len(text)} inputs, 0 embeddings returned")
             elif len(embed_response.embeddings) != len(text):
              logger.warning(f"embed count mismatch — expected {len(text)}, got {len(embed_response.embeddings)}")
-            # Log success
             else:
                 logger.info(f"embedded {len(text)} texts successfully")
             return embed_response.embeddings

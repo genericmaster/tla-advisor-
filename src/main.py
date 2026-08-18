@@ -117,10 +117,7 @@ def get_user_name(staff_number):
     return result[0] if result is not None else None
 
         
-def delete_cookie(response: Response):
-    response.delete_cookie(key="RAG_COOKIE")
-    logging.info( "Cookie deleted successfully client side")
-         
+
 @app.post("/login")
 @limiter.limit("5/minute")
 def login(request: Request,data:LoginRequest):

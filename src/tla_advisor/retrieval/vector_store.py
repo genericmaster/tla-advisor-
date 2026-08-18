@@ -4,7 +4,7 @@ from abc import ABC,abstractmethod
 
 logger = logging.getLogger(__name__)
 
-#abstract method that defines how  any other vector database class must be handles
+"abstract method that defines how  any other vector database class must be handled"
 class VectorStore(ABC):
     @abstractmethod
     def add(self,ids:list[str],embeddings:list[list[float]],documents:list[str])->None:
