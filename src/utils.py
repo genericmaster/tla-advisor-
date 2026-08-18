@@ -1,4 +1,5 @@
 
+import shutil
 import bcrypt
 import shutil
 from pathlib import Path
@@ -49,7 +50,7 @@ def approve_pending_correction(file_path: Path) -> None:
          raise
     
     clean_content = content.replace("## ", "")
-    
+
     chunks = text_splitting(clean_content)
     ids = [f"{file_path.stem}_chunk_{i}" for i in range(len(chunks))]
     #add file to samba
