@@ -4,6 +4,7 @@ import sqlite3
 from pathlib import Path
 from datetime import datetime,timezone
 from typing import Literal
+import re
 from fastapi import FastAPI,Request,Response,Depends,HTTPException
 from fastapi.responses import StreamingResponse,RedirectResponse,FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -37,10 +38,10 @@ async def add_csp_header(request: Request, call_next):
 class FeedBackCorrections(BaseModel):
     message_id:str
     conversation_id:str
-    query: str
-    answer: str
-    correct_solution: str
-    user_id: str| None=None
+    query:str
+    answer:str
+    correct_solution:str
+    
     
 class  FeedBackRatings(BaseModel):
     message_id :str
@@ -48,7 +49,7 @@ class  FeedBackRatings(BaseModel):
     rating: Literal['positive', 'negative'] | None
     query:str
     answer:str
-    user_id: str |None =None 
+    
     
 class Query(BaseModel):
     query:str
@@ -162,8 +163,10 @@ def rag(request:Request,query:Query,cookie=Depends(get_session))->StreamingRespo
 
 @app.post("/feedback")
 @limiter.limit("50/minute")
-def rating(request:Request,data:FeedBackRatings,cookie=Depends(get_session))->dict:
+def rating(request:Request,data:FeedBackRatings,staff_number=Depends(get_session))->dict:
     data_dict = data.model_dump()
+    user_name = get_user_name(staff_number)
+    data_dict["name"] = user_name
     data_dict['timestamp'] = datetime.now(timezone.utc).isoformat()
     try:
         append_jsonl_entry(FEEDBACK_RATING_PATH, data_dict)
@@ -175,19 +178,24 @@ def rating(request:Request,data:FeedBackRatings,cookie=Depends(get_session))->di
     
 @app.post("/feedback/correction")
 @limiter.limit("5/minute")
-def correction(request:Request,data:FeedBackCorrections,cookie=Depends(get_session)):
+def correction(request:Request,data:FeedBackCorrections,staff_number=Depends(get_session)):
     data_dict = data.model_dump()
+    user_name = get_user_name(staff_number)
+    data_dict["name"] = user_name
     data_dict['timestamp'] = datetime.now(timezone.utc).isoformat()
     try:
         append_jsonl_entry(path=FEEDBACK_CORRECTION_PATH, entry=data_dict)
-        formatting_request=evaluate_correction(query=data.query, answer=data.answer, correct_solution=data.correct_solution)
+        formatting_request=evaluate_correction(query=data.query, answer=data.answer, correct_solution=data.correct_solution,name= user_name)
         if formatting_request["verdict"] =="approved":
-            final_markdown = f"""## Problem {data.query}
- 
+            final_markdown = f"""## Name  {user_name}
+            
+                                 ## Problem {data.query}
+
                                  {formatting_request['solution_markdown']}"""
-            file_path = Path(PENDING_CORRECTIONS_PATH) / f"{data.message_id}.md"
+            safe_name = re.sub(r'[^\w\s-]', '', data.query).strip().replace(' ', '-')[:50]                    
+            file_path = Path(PENDING_CORRECTIONS_PATH) / f"{safe_name}.md"
             write_pending_correction(path=file_path,content=final_markdown)                     
-            logging.info(f"[{data_dict['timestamp']}] | User: {data.user_id} |\n{final_markdown}\n" + "-"*50)
+            logging.info(f"[{data_dict['timestamp']}] | User: {user_name} |\n{final_markdown}\n" + "-"*50)
             return {"status": "ok"}
         else:
             logging.info(formatting_request["rejection_reason"])
@@ -227,4 +235,13 @@ def serve_admin_page(request: Request):
     if staff_number is None or not is_admin(staff_number):
         return RedirectResponse(url="/login.html")
     return FileResponse(Path("src")/"frontend"/"admin.html")
+
+@app.get("/index.html")
+def serve_chat_page(request: Request):
+    session_id = request.cookies.get("RAG_COOKIE")
+    staff_number = session.get(session_id) if session_id else None
+    if staff_number is None:
+        return RedirectResponse(url="/login.html")
+    return FileResponse(Path("src") / "frontend" / "index.html")
+
 app.mount(path='/', app=StaticFiles(directory=str(Path("src") / "frontend"), html=True), name='static')

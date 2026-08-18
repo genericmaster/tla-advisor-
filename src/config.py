@@ -21,7 +21,7 @@ FEEDBACK_CORRECTION_PATH = Path("src")/"tla_advisor"/"feedback"/"feedback_correc
 
 #llm formatter
 REGULARISER_MODEL_NAME = "qwen3.5:9b"
-REGULARISER_SYSTEM_PROMPT = """You are a content reviewer for a building-support knowledge base. You will receive a JSON object containing three fields: "query" (the original support question), "answer" (the assistant's original response), and "correct_solution" (a user-submitted correction describing how the issue was actually solved).
+REGULARISER_SYSTEM_PROMPT = """You are a content reviewer for a building-support knowledge base. You will receive a JSON object containing four fields: "query" (the original support question), "answer" (the assistant's original response),  "correct_solution" (a user-submitted correction describing how the issue was actually solved) and name (actual name of the software user).
 
 Your job is to evaluate the "correct_solution" field and either approve it (with a cleaned, concise rewrite) or reject it.
 

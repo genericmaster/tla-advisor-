@@ -5,8 +5,8 @@ from tla_advisor.start_up import regulariser_generator
 
 logger = logging.getLogger(__name__)
 
-def evaluate_correction(query:str, answer:str, correct_solution:str) -> dict:
-    base_prompt = build_correction_prompt(query,answer,correct_solution)
+def evaluate_correction(query:str, answer:str, correct_solution:str,name:str) -> dict:
+    base_prompt = build_correction_prompt(query=query, name=name, answer=answer, correct_solution=correct_solution)
     try:
         request =regulariser_generator.generate(prompt=base_prompt,history=[])
         response = "".join(request)

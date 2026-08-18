@@ -8,13 +8,15 @@ def ollama_prompt_builder(query: str, retrived_chunks: dict) -> str:
     )
     prompt = "Context:\n" + numbered_chunks + "\n\nQuestion:\n" + query
     return prompt
+
 """Deals with building prompt for model responsible for formatting responses into proper structure."""
 
-def build_correction_prompt(query, answer, correct_solution)->json:
+def build_correction_prompt(query,name, answer, correct_solution)->json:
     prompt_dict = {
     "query": query,
     "answer": answer,
-    "correct_solution": correct_solution
+    "correct_solution": correct_solution,
+     "name" : name
      }
     
     return json.dumps(prompt_dict,ensure_ascii=False)
