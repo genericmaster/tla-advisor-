@@ -117,7 +117,12 @@ function isValidConversation(conversation) {
 function showTypingIndicator(bubble) {
     const indicator = document.createElement('div');
     indicator.className = 'typing-indicator';
-    indicator.innerHTML = '<span></span><span></span><span></span>';
+    const dot1 = document.createElement('span');
+    const dot2 = document.createElement('span');
+    const dot3 = document.createElement('span');
+    indicator.appendChild(dot1);
+    indicator.appendChild(dot2);
+    indicator.appendChild(dot3);
     bubble.appendChild(indicator);
 }
 
