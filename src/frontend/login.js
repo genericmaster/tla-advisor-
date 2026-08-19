@@ -27,7 +27,9 @@ async function handleLoginSubmit(event) {
 
     if (response.ok) {
         const body = await response.json();
+        sessionStorage.setItem('tla_fresh_login', 'true');
         window.location.href = body.is_admin ? '/admin.html' : '/index.html';
+        return;
     }
 
     loginError.textContent = 'Incorrect staff number or password.';
