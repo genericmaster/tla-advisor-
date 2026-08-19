@@ -114,7 +114,19 @@ function isValidConversation(conversation) {
 }
 
 
+function showTypingIndicator(bubble) {
+    const indicator = document.createElement('div');
+    indicator.className = 'typing-indicator';
+    indicator.innerHTML = '<span></span><span></span><span></span>';
+    bubble.appendChild(indicator);
+}
 
+function hideTypingIndicator(bubble) {
+    const indicator = bubble.querySelector('.typing-indicator');
+    if (indicator !== null) {
+        indicator.remove();
+    }
+}
 
 // ─── Rendering ────────────────────────────────────────────────────────────────
 const messagesEl = document.getElementById('messages');
@@ -178,14 +190,23 @@ function appendAssistantBubble(message) {
     bubble.className = 'bubble';
     bubble.textContent = message.content;
 
-    const feedback = buildFeedbackControls(message);
-
     wrapper.appendChild(bubble);
-    wrapper.appendChild(feedback);
-    messagesEl.appendChild(wrapper);
 
+    if (message.content !== '') {
+        wrapper.appendChild(buildFeedbackControls(message));
+    }
+
+    messagesEl.appendChild(wrapper);
 }
 
+function appendFeedbackToMessage(messageId) {
+    const wrapper = messagesEl.querySelector(`[data-message-id="${messageId}"]`);
+    if (wrapper === null) return;
+    const message = getMessageById(messageId);
+    if (message === null) return;
+    const feedback = buildFeedbackControls(message);
+    wrapper.appendChild(feedback);
+}
 function getSelectedFeedbackClass(rating, buttonType) {
     if (rating === 'positive' && buttonType === 'up') return true;
     if (rating === 'negative' && buttonType === 'down') return true;
@@ -542,6 +563,9 @@ const messageInput = document.querySelector('.message-input');
 let isRequestInFlight = false;
 
 async function sendQuery() {
+    let assistantMessage = null;
+    let assistantBubble = null;
+
     try {
         if (isRequestInFlight) return;
         const userText = messageInput.value.trim();
@@ -551,6 +575,8 @@ async function sendQuery() {
         sendBtn.classList.add('sending');
         messageInput.value = '';
 
+      
+
         ensureCurrentConversation();
         const userMessage = createMessage('user', userText);
         appendMessageToCurrent(userMessage);
@@ -558,22 +584,25 @@ async function sendQuery() {
         appendMessageBubble(userMessage);
         scrollToBottom();
 
-        const assistantMessage = createMessage('assistant', '');
+        assistantMessage = createMessage('assistant', '');
         appendMessageToCurrent(assistantMessage);
         appendMessageBubble(assistantMessage);
-        const assistantBubble = getBubbleElement(assistantMessage.id);
+        assistantBubble = getBubbleElement(assistantMessage.id);
         scrollToBottom();
 
         const responseText = await streamAssistantResponse(userText, assistantBubble);
         assistantMessage.content = responseText;
+        appendFeedbackToMessage(assistantMessage.id);
         if (shouldSetTitleNow()) {
             setTitleIfMissing(responseText);
         }
         updateHeaderTitle();
     } catch (error) {
-        assistantMessage.content = `Error: ${error.message}`;
-        assistantMessage.error = true;
-        assistantBubble.textContent = assistantMessage.content;
+        if (assistantMessage !== null) {
+            assistantMessage.content = `Error: ${error.message}`;
+            assistantMessage.error = true;
+            assistantBubble.textContent = assistantMessage.content;
+        }
     } finally {
         isRequestInFlight = false;
         sendBtn.classList.remove('sending');
@@ -637,13 +666,20 @@ async function streamAssistantResponse(query, bubble) {
         throw new Error('could not reach the advisor service');
     }
 
+    showTypingIndicator(bubble);
+
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let fullText = '';
+    let firstChunk = true;
 
     while (true) {
         const { done, value } = await reader.read();
         if (done) break;
+        if (firstChunk) {
+            hideTypingIndicator(bubble);
+            firstChunk = false;
+        }
         fullText += decoder.decode(value);
         bubble.textContent = fullText;
         scrollToBottom();
@@ -696,6 +732,11 @@ newChatBtn.addEventListener('click', handleNewChat);
 function restoreFromStorage() {
     loadState();
     if (currentConversationId !== null && !conversations.has(currentConversationId)) {
+        currentConversationId = null;
+    }
+    const isFreshLogin = sessionStorage.getItem('tla_fresh_login') === 'true';
+    if (isFreshLogin) {
+        sessionStorage.removeItem('tla_fresh_login');
         currentConversationId = null;
     }
     refreshSidebar();
