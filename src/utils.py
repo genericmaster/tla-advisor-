@@ -2,12 +2,14 @@
 import shutil
 import bcrypt
 import shutil
+import os,subprocess
 from pathlib import Path
 import logging
 from tla_advisor.document_preprocessing.splitter import text_splitting
 from tla_advisor.start_up import embedding_model,vector_store
-from config import SAMBA_CORRECTIONS_PATH
 logger = logging.getLogger(__name__)
+samba_path = samba_path = Path(os.environ.get("SAMBA_MOUNT_PATH"))
+
 def check_login(database,staff_number, password_attempt):
     cur = database.cursor()
     query = cur.execute(
@@ -55,16 +57,39 @@ def approve_pending_correction(file_path: Path) -> None:
     ids = [f"{file_path.stem}_chunk_{i}" for i in range(len(chunks))]
     #add file to samba
     try:
-        shutil.copy(file_path, SAMBA_CORRECTIONS_PATH / file_path.name)
+        shutil.copy(file_path, samba_path / file_path.name)
         logger.info("writing file to samba successful")
     except Exception as e:
-        logger.error(f"writing file to samba failed :{e}")
-        raise
+        logger.warning(f"samba write failed, attempting remount: {e}")
+        if remount_samba():
+            logger.info("remount successful, retrying write")
+            shutil.copy(file_path, samba_path / file_path.name)
+            logger.info("writing file to samba successful after remount")
+            raise
+        else:
+            logger.error("remount failed, samba write aborted")
+            raise
+        
     #add vector database
     embed_chunk = embedding_model.embed(chunks)
     vector_store.add(ids=ids, embeddings=embed_chunk, documents=chunks)
     
     #delete file
     file_path.unlink()
+    
 def reject_pending_correction(file_path: Path) -> None:
     file_path.unlink()
+    
+"""samba retry logic"""
+def remount_samba():
+    host = os.environ.get("SAMBA_HOST")
+    mount_path = os.environ.get("SAMBA_MOUNT_PATH")
+    username = os.environ.get("SAMBA_USERNAME")
+    password = os.environ.get("SAMBA_PASSWORD")
+    
+    result = subprocess.run([
+        "mount", "-t", "cifs", host, mount_path,
+        "-o", f"username={username},password={password},iocharset=utf8"
+    ], capture_output=True, text=True)
+    
+    return result.returncode == 0
