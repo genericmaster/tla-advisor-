@@ -1,12 +1,13 @@
 // ─── Data model ───────────────────────────────────────────────────────────────
 const conversations = new Map();
 let currentConversationId = null;
+
 function generateId() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
 
 function createConversation() {
-    const now = Date.now();
+    const now = new Date().toISOString();
     return {
         id: generateId(),
         title: null,
@@ -35,7 +36,7 @@ function getCurrentConversation() {
 function appendMessageToCurrent(message) {
     const conversation = getCurrentConversation();
     conversation.messages.push(message);
-    conversation.updatedAt = Date.now();
+    conversation.updatedAt = new Date().toISOString();
 }
 
 function deleteConversation(conversationId) {
@@ -52,72 +53,83 @@ function renameConversation(conversationId, newTitle) {
 }
 
 
+// ─── Persistence (backend API) ────────────────────────────────────────────────
 
-// ─── Persistence ──────────────────────────────────────────────────────────────
-const CONVERSATIONS_KEY = 'tla_conversations';
-const CURRENT_ID_KEY = 'tla_current_conversation_id';
+function toApiPayload(conversation) {
+    // converts camelCase local model to snake_case for backend
+    return {
+        id: conversation.id,
+        title: conversation.title,
+        messages: conversation.messages,
+        created_at: conversation.createdAt,
+        updated_at: conversation.updatedAt,
+    };
+}
+
+function fromApiPayload(data) {
+    // converts snake_case from backend to camelCase local model
+    return {
+        id: data.id,
+        title: data.title,
+        messages: data.messages,
+        createdAt: data.created_at,
+        updatedAt: data.updated_at,
+    };
+}
 
 function saveState() {
+    const conversation = getCurrentConversation();
+    if (conversation === null) return;
+    localStorage.setItem('tla_current_id', conversation.id);
+    syncConversation(conversation);
+}
+
+function syncConversation(conversation) {
+    // fire-and-forget POST to backend — same pattern as sendRatingFeedback
+    fetch('/conversations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(toApiPayload(conversation)),
+    }).catch(function (err) {
+        console.warn('Failed to sync conversation:', err);
+    });
+}
+
+function removeConversationFromBackend(conversationId) {
+    fetch(`/conversations/${conversationId}`, {
+        method: 'DELETE',
+    }).catch(function (err) {
+        console.warn('Failed to delete conversation from backend:', err);
+    });
+}
+
+async function fetchConversations() {
     try {
-        const payload = {
-            conversations: [...conversations],
-            currentConversationId,
-        };
-        localStorage.setItem(CONVERSATIONS_KEY, JSON.stringify(payload));
+        const response = await fetch('/conversations');
+        if (!response.ok) return;
+        const data = await response.json();
+        conversations.clear();
+        for (const item of data) {
+            const conversation = fromApiPayload(item);
+            conversations.set(conversation.id, conversation);
+        }
     } catch (err) {
-        console.warn('Failed to save state to localStorage:', err);
+        console.warn('Failed to fetch conversations:', err);
     }
 }
 
-function loadState() {
-    const raw = localStorage.getItem(CONVERSATIONS_KEY);
-    if (raw === null) return;
 
-    let parsed;
-    try {
-        parsed = JSON.parse(raw);
-    } catch {
-        return;
-    }
-
-    if (!isValidPayload(parsed)) return;
-
-    conversations.clear();
-    for (const [id, conversation] of parsed.conversations) {
-        conversations.set(id, conversation);
-    }
-    currentConversationId = parsed.currentConversationId;
-}
-
-function isValidPayload(payload) {
-    if (payload === null || typeof payload !== 'object') return false;
-    if (!Array.isArray(payload.conversations)) return false;
-    for (const entry of payload.conversations) {
-        if (!Array.isArray(entry) || entry.length !== 2) return false;
-        const [id, conversation] = entry;
-        if (typeof id !== 'string') return false;
-        if (!isValidConversation(conversation)) return false;
-    }
-    const currentId = payload.currentConversationId;
-    if (currentId !== null && typeof currentId !== 'string') return false;
-    return true;
-}
-
-function isValidConversation(conversation) {
-    if (conversation === null || typeof conversation !== 'object') return false;
-    if (typeof conversation.id !== 'string') return false;
-    if (conversation.title !== null && typeof conversation.title !== 'string') return false;
-    if (!Array.isArray(conversation.messages)) return false;
-    if (typeof conversation.createdAt !== 'number') return false;
-    if (typeof conversation.updatedAt !== 'number') return false;
-    return true;
-}
-
+// ─── Typing indicator ─────────────────────────────────────────────────────────
 
 function showTypingIndicator(bubble) {
     const indicator = document.createElement('div');
     indicator.className = 'typing-indicator';
-    indicator.innerHTML = '<span></span><span></span><span></span>';
+    const dot1 = document.createElement('span');
+    const dot2 = document.createElement('span');
+    const dot3 = document.createElement('span');
+    indicator.appendChild(dot1);
+    indicator.appendChild(dot2);
+    indicator.appendChild(dot3);
     bubble.appendChild(indicator);
 }
 
@@ -207,6 +219,7 @@ function appendFeedbackToMessage(messageId) {
     const feedback = buildFeedbackControls(message);
     wrapper.appendChild(feedback);
 }
+
 function getSelectedFeedbackClass(rating, buttonType) {
     if (rating === 'positive' && buttonType === 'up') return true;
     if (rating === 'negative' && buttonType === 'down') return true;
@@ -232,7 +245,6 @@ function buildFeedbackControls(message) {
     return feedback;
 }
 
-
 function getMessageById(messageId) {
     for (const conversation of conversations.values()) {
         const found = conversation.messages.find(function (message) {
@@ -252,6 +264,7 @@ function scrollToBottom() {
 }
 
 let activeFeedbackMessageId = null;
+
 function sendRatingFeedback(message, conversationId, query) {
     fetch('/feedback', {
         method: 'POST',
@@ -280,7 +293,6 @@ function handleFeedbackClick(event) {
     const clickedRating = button.classList.contains('feedback-btn--up') ? 'positive' : 'negative';
     toggleMessageRating(message, clickedRating);
     applyFeedbackSelection(feedbackEl, message.rating);
-    saveState();
 
     const conversation = findConversationByMessageId(messageId);
     const query = getQueryForMessage(conversation, messageId);
@@ -293,15 +305,6 @@ function handleFeedbackClick(event) {
 }
 
 messagesEl.addEventListener('click', handleFeedbackClick);
-
-function closeSheet() {
-    bottomSheet.classList.remove('open');
-    sheetOverlay.classList.remove('active');
-    document.getElementById('sheetInput').value = '';
-    activeFeedbackMessageId = null;
-}
-
-
 
 function findConversationByMessageId(messageId) {
     for (const conversation of conversations.values()) {
@@ -321,8 +324,7 @@ function getQueryForMessage(conversation, messageId) {
     return conversation.messages[index - 1].content;
 }
 
-// -------Sidebar Toggle -----------
-
+// ─── Sidebar toggle ───────────────────────────────────────────────────────────
 const sidebar = document.getElementById('sidebar');
 const sidebarOverlay = document.getElementById('sidebarOverlay');
 const menuBtn = document.getElementById('menuBtn');
@@ -368,7 +370,7 @@ function updateHeaderTitle() {
 
 function getSortedConversations() {
     return [...conversations.values()].sort(function (a, b) {
-        return b.updatedAt - a.updatedAt;
+        return b.updatedAt > a.updatedAt ? 1 : -1;
     });
 }
 
@@ -412,12 +414,10 @@ function closeEntryMenu() {
 
 function toggleEntryMenu(entry) {
     const conversationId = entry.dataset.conversationId;
-
     if (openEntryMenuId === conversationId) {
         closeEntryMenu();
         return;
     }
-
     closeEntryMenu();
     entry.querySelector('.history-entry-menu').classList.add('open');
     openEntryMenuId = conversationId;
@@ -427,18 +427,16 @@ function handleDeleteClick(entry) {
     const conversationId = entry.dataset.conversationId;
     const confirmed = confirm('Delete this conversation? This cannot be undone.');
     if (!confirmed) return;
-
+    removeConversationFromBackend(conversationId);
     deleteConversation(conversationId);
     closeEntryMenu();
     renderChatArea();
     updateHeaderTitle();
     refreshSidebar();
-    saveState();
 }
 
 function startEntryRename(entry) {
     closeEntryMenu();
-
     const conversationId = entry.dataset.conversationId;
     const titleEl = entry.querySelector('.history-entry-title');
     const currentTitle = titleEl.textContent;
@@ -456,7 +454,10 @@ function startEntryRename(entry) {
         const newTitle = input.value.trim();
         if (newTitle !== '') {
             renameConversation(conversationId, newTitle);
-            saveState();
+            const conversation = conversations.get(conversationId);
+            if (conversation !== undefined) {
+                syncConversation(conversation);
+            }
             if (conversationId === currentConversationId) {
                 updateHeaderTitle();
             }
@@ -502,16 +503,16 @@ function handleSidebarClick(event) {
         return;
     }
     currentConversationId = conversationId;
+    localStorage.setItem('tla_current_id', conversationId);
     renderChatArea();
     updateHeaderTitle();
     closeSidebar();
     refreshSidebar();
-    saveState();
 }
 
 historyList.addEventListener('click', handleSidebarClick);
 
-// ─── Logout ─────────────────────────────────────────────────────────────────
+// ─── Logout ───────────────────────────────────────────────────────────────────
 const logoutBtn = document.getElementById('logoutBtn');
 
 async function handleLogout() {
@@ -521,8 +522,7 @@ async function handleLogout() {
 
 logoutBtn.addEventListener('click', handleLogout);
 
-// ─── Bottom sheet ───
-
+// ─── Bottom sheet ─────────────────────────────────────────────────────────────
 const bottomSheet = document.getElementById('bottomSheet');
 const sheetOverlay = document.getElementById('sheetOverlay');
 const sheetClose = document.getElementById('sheetClose');
@@ -549,11 +549,11 @@ function closeSheet() {
     bottomSheet.classList.remove('open');
     sheetOverlay.classList.remove('active');
     document.getElementById('sheetInput').value = '';
+    activeFeedbackMessageId = null;
 }
 
 sheetClose.addEventListener('click', closeSheet);
 sheetOverlay.addEventListener('click', closeSheet);
-
 
 
 // ─── Send query ───────────────────────────────────────────────────────────────
@@ -574,8 +574,6 @@ async function sendQuery() {
         isRequestInFlight = true;
         sendBtn.classList.add('sending');
         messageInput.value = '';
-
-      
 
         ensureCurrentConversation();
         const userMessage = createMessage('user', userText);
@@ -627,10 +625,10 @@ function shouldSetTitleNow() {
     return userMessageCount >= 2;
 }
 
-function setTitleIfMissing(firstUserText) {
+function setTitleIfMissing(text) {
     const conversation = getCurrentConversation();
     if (conversation.title !== null) return;
-    conversation.title = truncateTitle(firstUserText);
+    conversation.title = truncateTitle(text);
 }
 
 function truncateTitle(text) {
@@ -688,7 +686,6 @@ async function streamAssistantResponse(query, bubble) {
     return fullText;
 }
 
-// send button event listeners
 sendBtn.addEventListener('click', sendQuery);
 messageInput.addEventListener('keydown', function (event) {
     if (event.key === 'Enter' && !event.shiftKey) {
@@ -698,7 +695,7 @@ messageInput.addEventListener('keydown', function (event) {
 });
 
 
-// ─── Dark mode ───
+// ─── Dark mode ────────────────────────────────────────────────────────────────
 const themeToggle = document.getElementById('darkModeToggle');
 
 const savedTheme = localStorage.getItem('theme');
@@ -718,21 +715,21 @@ const newChatBtn = document.getElementById('newChatBtn');
 
 function handleNewChat() {
     currentConversationId = null;
+    localStorage.removeItem('tla_current_id');
     renderChatArea();
     updateHeaderTitle();
     refreshSidebar();
     closeSidebar();
-    saveState();
 }
-
 newChatBtn.addEventListener('click', handleNewChat);
 
 
 // ─── Startup ──────────────────────────────────────────────────────────────────
-function restoreFromStorage() {
-    loadState();
-    if (currentConversationId !== null && !conversations.has(currentConversationId)) {
-        currentConversationId = null;
+async function restoreFromStorage() {
+    await fetchConversations();
+    const savedId = localStorage.getItem('tla_current_id');
+    if (savedId !== null && conversations.has(savedId)) {
+        currentConversationId = savedId;
     }
     const isFreshLogin = sessionStorage.getItem('tla_fresh_login') === 'true';
     if (isFreshLogin) {
@@ -747,6 +744,7 @@ function restoreFromStorage() {
 restoreFromStorage();
 
 
+// ─── Correction feedback ──────────────────────────────────────────────────────
 const THANKS_DISPLAY_DURATION_MS = 1500;
 
 function sendCorrectionFeedback(messageId, conversationId, correctSolution, query, answer) {
@@ -786,7 +784,6 @@ function handleSheetSubmit() {
 }
 
 sheetSubmit.addEventListener('click', handleSheetSubmit);
-
 
 function resetSheetToInputView() {
     sheetInputView.classList.remove('hidden');

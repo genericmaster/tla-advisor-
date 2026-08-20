@@ -1,6 +1,7 @@
 
 import shutil
 import bcrypt
+import json
 from pathlib import Path
 from tla_advisor.document_preprocessing.splitter import text_splitting
 from tla_advisor.start_up import embedding_model,vector_store
@@ -55,3 +56,53 @@ def approve_pending_correction(file_path: Path) -> None:
     file_path.unlink()
 def reject_pending_correction(file_path: Path) -> None:
     file_path.unlink()
+    
+    
+def get_conversations(database,staff_number:str):
+    cur = database.cursor()
+    results = cur.execute("""
+        SELECT id, title, messages, created_at, updated_at
+        FROM conversations
+        WHERE staff_number = ?
+        ORDER BY updated_at DESC
+    """, (staff_number,)).fetchall()
+    return [
+        {
+            "id": row[0],
+            "title": row[1],
+            "messages": json.loads(row[2]),
+            "created_at": row[3],
+            "updated_at": row[4],
+        }
+        for row in results
+    ]
+    
+    
+def upsert_conversation(database,staff_number: str, conversation: dict) -> None:
+  messages_json = json.dumps(conversation["messages"])
+  cur = database.cursor()
+  cur.execute("""INSERT INTO conversations (id, staff_number, title, messages, created_at, updated_at)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                        ON CONFLICT(id) DO UPDATE SET
+                            title = excluded.title,
+                            messages = excluded.messages,
+                            updated_at = excluded.updated_at"""
+                            ,(conversation["id"],
+                            staff_number,
+                            conversation["title"],
+                            messages_json,
+                            conversation["created_at"],
+                            conversation["updated_at"]
+                         ))
+  database.commit()
+
+
+def delete_conversation(database, staff_number: str, conversation_id: str) -> None:
+    cur = database.cursor()
+    cur.execute(
+        "DELETE FROM conversations WHERE id = ? AND staff_number = ?",
+        (conversation_id, staff_number)
+    )
+    database.commit()
+    
+
