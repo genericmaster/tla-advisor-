@@ -8,7 +8,7 @@ import logging
 from tla_advisor.document_preprocessing.splitter import text_splitting
 from tla_advisor.start_up import embedding_model,vector_store
 logger = logging.getLogger(__name__)
-samba_path = samba_path = Path(os.environ.get("SAMBA_MOUNT_PATH"))
+samba_path = Path(os.environ.get("SAMBA_MOUNT_PATH"))
 
 def check_login(database,staff_number, password_attempt):
     cur = database.cursor()
