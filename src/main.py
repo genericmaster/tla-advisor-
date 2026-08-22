@@ -13,7 +13,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from pydantic import BaseModel
-from utils import check_login,approve_pending_correction,reject_pending_correction
+from utils import check_login,approve_pending_correction,reject_pending_correction,get_conversations,upsert_conversation,delete_conversation
 from tla_advisor.start_up import pipeline
 from tla_advisor.feedback.feedback_path import  append_jsonl_entry,write_pending_correction
 from tla_advisor.feedback.feedback_regulariser import evaluate_correction
@@ -58,6 +58,13 @@ class Query(BaseModel):
 class LoginRequest(BaseModel):
     staff_number: str
     password: str
+    
+class ConversationPayload(BaseModel):
+    id: str
+    title: str | None
+    messages: list[dict]
+    created_at: str
+    updated_at: str
     
 
 def stream_generator(query: str,history:list[dict]):
@@ -200,7 +207,40 @@ def correction(request:Request,data:FeedBackCorrections,staff_number=Depends(get
     except Exception as e:
         logging.error(f"correction writing error :{e}")
         return {"status":"error"}
-        
+   
+@app.get("/conversations")
+def conversations(staff_number=Depends(get_session)):
+    try:
+        database = sqlite3.connect(TLA_DB_PATH)
+        result = get_conversations(database, staff_number)
+        database.close()
+        return result
+    except Exception as e:
+        logging.error(f"database error: {e}")
+        raise HTTPException(status_code=500, detail="Could not fetch conversations")
+
+
+@app.post("/conversations")
+def update_conversation(conversation:ConversationPayload,staff_number =Depends(get_session))->dict:
+    try:
+        database = sqlite3.connect(TLA_DB_PATH)
+        upsert_conversation(database=database,staff_number=staff_number,conversation=conversation.model_dump())
+        database.close()
+        return {"status": "ok"}
+    except Exception as e:
+            logging.error(f"database error: {e}")
+            raise HTTPException(status_code=500, detail="Could not update database")
+
+@app.delete("/conversations/{conversation_id}")
+def remove_conversation(conversation_id: str, staff_number=Depends(get_session)) -> dict:
+    try:
+        database = sqlite3.connect(TLA_DB_PATH)
+        delete_conversation(database=database, staff_number=staff_number, conversation_id=conversation_id)
+        database.close()
+        return {"status": "ok"}
+    except Exception as e:
+        logging.error(f"database error: {e}")
+        raise HTTPException(status_code=500, detail="Could not delete conversation")
    
 @app.get("/admin/pending-corrections")
 def pending_corrections(admin=Depends(require_admin)):
