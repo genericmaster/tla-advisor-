@@ -9,10 +9,8 @@
 </head>
 <body>
 
-    <!-- Sidebar overlay -->
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-    <!-- Slide-in sidebar -->
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <span>TLA ADMIN</span>
@@ -22,29 +20,48 @@
             <button class="logout-btn" id="logoutBtn">Log out</button>
             <p class="sidebar-section-label">Review</p>
             <ul class="admin-nav-list">
-                <li class="admin-nav-item admin-nav-item--active">
+                <li class="admin-nav-item admin-nav-item--active" id="navCorrections" style="cursor:pointer">
                     Pending Corrections
                     <span class="admin-nav-count" id="pendingCount">0</span>
+                </li>
+                <li class="admin-nav-item" id="navDocuments" style="cursor:pointer">
+                    Documents
                 </li>
             </ul>
         </nav>
     </aside>
 
-    <!-- Main admin panel -->
     <div class="admin-panel">
 
-        <!-- Fixed header -->
         <header class="admin-header">
             <button class="menu-btn" id="menuBtn" aria-label="Open menu">☰</button>
-            <h1 class="admin-title">Pending Corrections</h1>
+            <h1 class="admin-title" id="adminTitle">Pending Corrections</h1>
             <button class="admin-refresh-btn" id="refreshBtn" aria-label="Refresh">↻</button>
         </header>
 
-        <!-- Scrollable queue area -->
-        <main class="admin-queue" id="queue">
+        <!-- Corrections section -->
+        <main class="admin-queue" id="queueSection">
             <div class="admin-empty-state" id="emptyState">
                 <p>Nothing waiting on you right now.</p>
                 <p class="admin-empty-hint">Approved corrections will appear here for review before joining the corpus.</p>
+            </div>
+        </main>
+
+        <!-- Documents section -->
+        <main class="admin-queue hidden" id="documentsSection">
+            <div class="doc-upload-area">
+                <label class="doc-upload-label" for="fileInput">Upload a document</label>
+                <p class="doc-upload-hint">Supported: PDF, TXT</p>
+                <input type="file" id="fileInput" accept=".pdf,.txt" style="display:none">
+                <button class="correction-action-btn correction-action-btn--approve" id="uploadBtn">Choose file</button>
+                <span id="uploadStatus" class="doc-upload-status"></span>
+            </div>
+
+            <div class="doc-list-area">
+                <p class="sidebar-section-label" style="margin-bottom:12px">Ingested documents</p>
+                <ul class="doc-list" id="docList">
+                    <li class="admin-empty-state" style="margin-top:0">Loading...</li>
+                </ul>
             </div>
         </main>
 

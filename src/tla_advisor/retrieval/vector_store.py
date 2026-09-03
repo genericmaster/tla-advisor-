@@ -12,6 +12,12 @@ class VectorStore(ABC):
     @abstractmethod
     def query(self,query_embedding:list[list[float]] ,n_results=5)->dict:
         pass
+    @abstractmethod
+    def get_document():
+        return NotImplementedError
+    @abstractmethod
+    def delete_document():
+        return NotImplementedError
     
 class ChromaVectorStore(VectorStore):
     def __init__(self,collection_name:str,client:PersistentClient):
@@ -47,6 +53,21 @@ class ChromaVectorStore(VectorStore):
         except Exception as e:
            logger.error(f"query could not be perfomed : {e}")
            raise
+    def get_document(self):
+        return self.collection.get()
+    def delete_document(self, doc_name):
+        docs = self.get_document()
+        ids_to_delete = [
+            id for id in docs["ids"]
+            if id.startswith(f"{doc_name}_chunk_")
+        ]
+        
+        if ids_to_delete:
+            self.collection.delete(ids=ids_to_delete)
+        
+        return len(ids_to_delete)
+            
+        
     
        
         

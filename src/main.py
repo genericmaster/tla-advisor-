@@ -5,7 +5,7 @@ from pathlib import Path
 from datetime import datetime,timezone
 from typing import Literal
 import re
-from fastapi import FastAPI,Request,Response,Depends,HTTPException
+from fastapi import FastAPI,Request,Response,Depends,HTTPException,UploadFile,File
 from fastapi.responses import StreamingResponse,RedirectResponse,FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
@@ -13,8 +13,9 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from pydantic import BaseModel
-from utils import check_login,approve_pending_correction,reject_pending_correction,get_conversations,upsert_conversation,delete_conversation
-from tla_advisor.start_up import pipeline
+from utils import check_login,approve_pending_correction,reject_pending_correction,get_conversations,upsert_conversation,delete_conversation,write_to_temp_file
+from tla_advisor.document_preprocessing.ingestion import ingest_document
+from tla_advisor.start_up import pipeline,vector_store
 from tla_advisor.feedback.feedback_path import  append_jsonl_entry,write_pending_correction
 from tla_advisor.feedback.feedback_regulariser import evaluate_correction
 from config import  FEEDBACK_RATING_PATH,FEEDBACK_CORRECTION_PATH,TLA_DB_PATH,PENDING_CORRECTIONS_PATH
@@ -264,6 +265,32 @@ def reject_correction(message_id: str, admin=Depends(require_admin)):
     reject_pending_correction(file_path)
     return {"status": "ok"}
 
+
+@app.post("/upload-file")
+def upload_file(file:UploadFile=File(...),admin=Depends(require_admin))->dict:
+    file_bytes = file.file.read()
+    name = Path(file.filename).stem
+    suffix = Path(file.filename).suffix
+    file_name=write_to_temp_file(file_bytes=file_bytes,extension=suffix,name=name)
+    try:
+        ingest_document(source=file_name)
+    finally:
+        Path(file_name).unlink(missing_ok=True)
+    return {"200":"ok"}
+
+@app.get("/admin/documents")
+def get_documents(admin=Depends(require_admin)):
+    result = vector_store.get_document()
+    ids = result.get("ids", [])
+    doc_names = list({id.rsplit("_chunk_", 1)[0] for id in ids})
+    return {"documents": doc_names}
+
+@app.delete("/admin/documents/{doc_name}")
+def delete_document(doc_name: str, admin=Depends(require_admin)):
+    deleted_count = vector_store.delete_document(doc_name)
+    if deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Document not found")
+    return {"status": "ok", "chunks_deleted": deleted_count}
 
 @app.get("/admin.html")
 def serve_admin_page(request: Request):

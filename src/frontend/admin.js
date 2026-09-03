@@ -1,47 +1,72 @@
-// ─── Sidebar toggle ─────────────────────────────────────────────────────────
+// ─── Sidebar toggle ──────────────────────────────────────────────────────────
 const sidebar = document.getElementById('sidebar');
 const sidebarOverlay = document.getElementById('sidebarOverlay');
 const menuBtn = document.getElementById('menuBtn');
 const sidebarClose = document.getElementById('sidebarClose');
 
-function openSidebar() {
-    sidebar.classList.add('open');
-    sidebarOverlay.classList.add('active');
-}
-
-function closeSidebar() {
-    sidebar.classList.remove('open');
-    sidebarOverlay.classList.remove('active');
-}
+function openSidebar() { sidebar.classList.add('open'); sidebarOverlay.classList.add('active'); }
+function closeSidebar() { sidebar.classList.remove('open'); sidebarOverlay.classList.remove('active'); }
 
 menuBtn.addEventListener('click', openSidebar);
 sidebarClose.addEventListener('click', closeSidebar);
 sidebarOverlay.addEventListener('click', closeSidebar);
 
-// ─── Logout ─────────────────────────────────────────────────────────────────
-const logoutBtn = document.getElementById('logoutBtn');
-
-async function handleLogout() {
+// ─── Logout ──────────────────────────────────────────────────────────────────
+document.getElementById('logoutBtn').addEventListener('click', async () => {
     await fetch('/logout', { method: 'POST' });
     window.location.href = '/login.html';
+});
+
+// ─── Nav switching ───────────────────────────────────────────────────────────
+const navCorrections = document.getElementById('navCorrections');
+const navDocuments = document.getElementById('navDocuments');
+const queueSection = document.getElementById('queueSection');
+const documentsSection = document.getElementById('documentsSection');
+const adminTitle = document.getElementById('adminTitle');
+
+function showCorrections() {
+    queueSection.classList.remove('hidden');
+    documentsSection.classList.add('hidden');
+    navCorrections.classList.add('admin-nav-item--active');
+    navDocuments.classList.remove('admin-nav-item--active');
+    adminTitle.textContent = 'Pending Corrections';
+    fetchPendingCorrections();
+    closeSidebar();
 }
 
-logoutBtn.addEventListener('click', handleLogout);
+function showDocuments() {
+    documentsSection.classList.remove('hidden');
+    queueSection.classList.add('hidden');
+    navDocuments.classList.add('admin-nav-item--active');
+    navCorrections.classList.remove('admin-nav-item--active');
+    adminTitle.textContent = 'Documents';
+    fetchDocuments();
+    closeSidebar();
+}
 
-// ─── Queue rendering ────────────────────────────────────────────────────────
-const queueEl = document.getElementById('queue');
+navCorrections.addEventListener('click', showCorrections);
+navDocuments.addEventListener('click', showDocuments);
+
+// ─── Refresh button ──────────────────────────────────────────────────────────
+const refreshBtn = document.getElementById('refreshBtn');
+refreshBtn.addEventListener('click', () => {
+    refreshBtn.classList.add('spinning');
+    const isCorrections = !queueSection.classList.contains('hidden');
+    const task = isCorrections ? fetchPendingCorrections() : fetchDocuments();
+    task.finally(() => setTimeout(() => refreshBtn.classList.remove('spinning'), 300));
+});
+
+// ─── Corrections ─────────────────────────────────────────────────────────────
+const queueEl = document.getElementById('queueSection');
 const emptyState = document.getElementById('emptyState');
 const pendingCountEl = document.getElementById('pendingCount');
 
-function showEmptyState() {
-    queueEl.innerHTML = '';
-    queueEl.appendChild(emptyState);
+function escapeHtml(text) {
+    return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-function hideEmptyState() {
-    if (emptyState.parentNode === queueEl) {
-        queueEl.removeChild(emptyState);
-    }
+function formatCorrectionBody(content) {
+    return content.replace(/##\s*Problem/i,'<strong>Problem</strong>').replace(/##\s*Solution/i,'<strong>Solution</strong>');
 }
 
 function updatePendingCount(count) {
@@ -49,136 +74,117 @@ function updatePendingCount(count) {
     pendingCountEl.dataset.empty = count === 0 ? 'true' : 'false';
 }
 
-function formatCorrectionBody(content) {
-    const withLabels = content
-        .replace(/##\s*Problem/i, '<strong>Problem</strong>')
-        .replace(/##\s*Solution/i, '<strong>Solution</strong>');
-    return withLabels;
-}
-
 function buildCorrectionCard(correction) {
     const card = document.createElement('div');
     card.className = 'correction-card';
     card.dataset.messageId = correction.message_id;
-
-    const body = document.createElement('div');
-    body.className = 'correction-card-body';
-    body.innerHTML = formatCorrectionBody(escapeHtml(correction.content));
-
-    const actions = document.createElement('div');
-    actions.className = 'correction-card-actions';
-    actions.innerHTML = `
-        <button class="correction-action-btn correction-action-btn--reject">Reject</button>
-        <button class="correction-action-btn correction-action-btn--approve">Approve</button>
-    `;
-
-    card.appendChild(body);
-    card.appendChild(actions);
+    card.innerHTML = `
+        <div class="correction-card-body">${formatCorrectionBody(escapeHtml(correction.content))}</div>
+        <div class="correction-card-actions">
+            <button class="correction-action-btn correction-action-btn--reject">Reject</button>
+            <button class="correction-action-btn correction-action-btn--approve">Approve</button>
+        </div>`;
     return card;
 }
 
 function renderQueue(corrections) {
     queueEl.innerHTML = '';
     updatePendingCount(corrections.length);
-
     if (corrections.length === 0) {
-        showEmptyState();
+        queueEl.appendChild(emptyState);
         return;
     }
-
-    for (const correction of corrections) {
-        queueEl.appendChild(buildCorrectionCard(correction));
-    }
+    for (const c of corrections) queueEl.appendChild(buildCorrectionCard(c));
 }
 
-// Escape user/model-generated text before inserting as HTML
-function escapeHtml(text) {
-    return text
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-}
-
-// ─── Fetching ────────────────────────────────────────────────────────────────
 async function fetchPendingCorrections() {
-    const response = await fetch('/admin/pending-corrections');
-    if (!response.ok) {
-        showLoadError();
-        return;
-    }
-    const corrections = await response.json();
-    renderQueue(corrections);
-}
-
-function showLoadError() {
-    queueEl.innerHTML = '';
-    const errorState = document.createElement('div');
-    errorState.className = 'admin-empty-state';
-    errorState.innerHTML = `
-        <p>Couldn't load pending corrections.</p>
-        <p class="admin-empty-hint">Try refreshing.</p>
-    `;
-    queueEl.appendChild(errorState);
-}
-
-// ─── Approve / reject ───────────────────────────────────────────────────────
-function setCardBusy(card, busy) {
-    const buttons = card.querySelectorAll('.correction-action-btn');
-    buttons.forEach(function (button) {
-        button.disabled = busy;
-    });
+    const res = await fetch('/admin/pending-corrections');
+    if (!res.ok) { queueEl.innerHTML = '<div class="admin-empty-state"><p>Could not load corrections.</p></div>'; return; }
+    renderQueue(await res.json());
 }
 
 function removeCard(card) {
     card.classList.add('leaving');
-    card.addEventListener('animationend', function () {
+    card.addEventListener('animationend', () => {
         card.remove();
         const remaining = queueEl.querySelectorAll('.correction-card').length;
         updatePendingCount(remaining);
-        if (remaining === 0) {
-            showEmptyState();
-        }
+        if (remaining === 0) queueEl.appendChild(emptyState);
     });
 }
 
-async function handleQueueClick(event) {
-    const approveBtn = event.target.closest('.correction-action-btn--approve');
-    const rejectBtn = event.target.closest('.correction-action-btn--reject');
-    if (approveBtn === null && rejectBtn === null) return;
-
-    const card = event.target.closest('.correction-card');
+queueEl.addEventListener('click', async (e) => {
+    const approve = e.target.closest('.correction-action-btn--approve');
+    const reject = e.target.closest('.correction-action-btn--reject');
+    if (!approve && !reject) return;
+    const card = e.target.closest('.correction-card');
     const messageId = card.dataset.messageId;
-    const action = approveBtn !== null ? 'approve' : 'reject';
+    const action = approve ? 'approve' : 'reject';
+    card.querySelectorAll('button').forEach(b => b.disabled = true);
+    const res = await fetch(`/admin/pending-corrections/${messageId}/${action}`, { method: 'POST' });
+    if (res.ok) removeCard(card);
+    else card.querySelectorAll('button').forEach(b => b.disabled = false);
+});
 
-    setCardBusy(card, true);
+// ─── Documents ───────────────────────────────────────────────────────────────
+const docList = document.getElementById('docList');
+const uploadBtn = document.getElementById('uploadBtn');
+const fileInput = document.getElementById('fileInput');
+const uploadStatus = document.getElementById('uploadStatus');
 
-    const response = await fetch(`/admin/pending-corrections/${messageId}/${action}`, {
-        method: 'POST',
-    });
+async function fetchDocuments() {
+    docList.innerHTML = '<li class="admin-empty-state" style="margin-top:0">Loading...</li>';
+    const res = await fetch('/admin/documents');
+    if (!res.ok) { docList.innerHTML = '<li class="admin-empty-state" style="margin-top:0">Could not load documents.</li>'; return; }
+    const data = await res.json();
+    renderDocuments(data.documents);
+}
 
-    if (response.ok) {
-        removeCard(card);
-    } else {
-        setCardBusy(card, false);
+function renderDocuments(docs) {
+    docList.innerHTML = '';
+    if (docs.length === 0) {
+        docList.innerHTML = '<li class="admin-empty-state" style="margin-top:0">No documents ingested yet.</li>';
+        return;
+    }
+    for (const name of docs) {
+        const li = document.createElement('li');
+        li.className = 'doc-list-item';
+        li.innerHTML = `<span>${escapeHtml(name)}</span><button class="doc-delete-btn" data-name="${escapeHtml(name)}">✕</button>`;
+        docList.appendChild(li);
     }
 }
 
-queueEl.addEventListener('click', handleQueueClick);
+docList.addEventListener('click', async (e) => {
+    const btn = e.target.closest('.doc-delete-btn');
+    if (!btn) return;
+    const name = btn.dataset.name;
+    if (!confirm(`Delete "${name}" from the knowledge base?`)) return;
+    btn.disabled = true;
+    const res = await fetch(`/admin/documents/${encodeURIComponent(name)}`, { method: 'DELETE' });
+    if (res.ok) fetchDocuments();
+    else { btn.disabled = false; alert('Could not delete document.'); }
+});
 
-// ─── Startup ────────────────────────────────────────────────────────────────
+uploadBtn.addEventListener('click', () => fileInput.click());
+
+fileInput.addEventListener('change', async () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+    uploadStatus.textContent = 'Uploading...';
+    uploadStatus.className = 'doc-upload-status';
+    const form = new FormData();
+    form.append('file', file);
+    const res = await fetch('/upload-file', { method: 'POST', body: form });
+    if (res.ok) {
+        uploadStatus.textContent = `"${file.name}" ingested successfully.`;
+        uploadStatus.className = 'doc-upload-status success';
+        fileInput.value = '';
+        fetchDocuments();
+    } else {
+        uploadStatus.textContent = 'Upload failed. Check the file type and try again.';
+        uploadStatus.className = 'doc-upload-status error';
+    }
+});
+
+// ─── Init ────────────────────────────────────────────────────────────────────
 fetchPendingCorrections();
-
-// ─── Refresh button ─────────────────────────────────────────────────────────
-const refreshBtn = document.getElementById('refreshBtn');
-
-function handleRefreshClick() {
-    refreshBtn.classList.add('spinning');
-    fetchPendingCorrections().finally(function () {
-        setTimeout(function () {
-            refreshBtn.classList.remove('spinning');
-        }, 300);
-    });
-}
-
-refreshBtn.addEventListener('click', handleRefreshClick);

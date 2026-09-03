@@ -3,10 +3,9 @@ from pathlib import Path
 #model names
 EMBEDDER_NAME = "nomic-embed-text"
 GENERATOR_NAME = "qwen3.5:9b" 
-VISION_MODEL_NAME = "qwen2.5vl:7b  "
 
 # hardcoded paths
-COLLECTION_NAME = "first_proper_collection"
+COLLECTION_NAME = "tla_document_collection"
 DATA_PATH =Path("data")/"persistent_data"
 TLA_DB_PATH = Path("data") / "database" / "users.db"
 PENDING_CORRECTIONS_PATH= Path("data")/"pending_corrections"

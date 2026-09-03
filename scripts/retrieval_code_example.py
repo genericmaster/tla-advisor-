@@ -27,3 +27,4 @@ results=collection.query(query_embeddings=query_embed,
                 
 )
 print(results)
+

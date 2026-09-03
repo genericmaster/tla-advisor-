@@ -2,6 +2,7 @@
 import shutil
 import bcrypt
 import json
+import tempfile
 from pathlib import Path
 import logging
 import os,subprocess
@@ -140,5 +141,17 @@ def delete_conversation(database, staff_number: str, conversation_id: str) -> No
         (conversation_id, staff_number)
     )
     database.commit()
+    
+def write_to_temp_file(file_bytes:bytes,extension:str,name:str)->str:
+    """writes upladed documents to a temporary file before processeing to ingestion in vector database"""
+    temp_dir = tempfile.gettempdir()
+    temp_path = Path(temp_dir) / f"{name}{extension}"
+    with open(temp_path, 'wb') as f:
+        f.write(file_bytes)
+    return str(temp_path)
+    
+   
+        
+        
     
 

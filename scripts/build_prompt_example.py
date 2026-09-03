@@ -53,6 +53,7 @@ query_response=vb_client.query(
 )
 
 
+
 #response works now how do we stich this 2 concepts togwether
 #well we need origina query and then the returned chnuks  concatinated and seprated befpre we pass to llm
 
